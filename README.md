@@ -1,213 +1,210 @@
 # EngineerFuelSaver
 
-KSP-1.12.5-Plugin: Ein Ingenieur an Bord senkt den Treibstoffverbrauch aller Triebwerke
-des Schiffs um **1 % pro Sterne-Level**.
+*[Deutsche Fassung](README.de.md)*
 
-| Level des Ingenieurs | 0 | 1 | 2 | 3 | 4 | 5 |
+A Kerbal Space Program 1.12.5 plugin: an engineer aboard reduces the fuel consumption of
+every engine on the vessel by **1 % per experience level**.
+
+| Engineer level | 0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|
-| Ersparnis | 0 % | 1 % | 2 % | 3 % | 4 % | 5 % |
+| Fuel saved | 0 % | 1 % | 2 % | 3 % | 4 % | 5 % |
 
-* Es zaehlt nur der **beste** Ingenieur an Bord, mehrere Ingenieure stapeln sich nicht.
-* Umgesetzt ueber den **spezifischen Impuls** - das Delta-v steigt entsprechend und alle
-  Bordanzeigen bleiben konsistent.
-* Feststoffbooster sind ausgenommen (konfigurierbar).
+* Only the **most experienced** engineer aboard counts - engineers do not stack.
+* Implemented through **specific impulse**, so delta-v rises accordingly and every
+  in-game readout stays consistent.
+* Solid boosters are excluded (configurable).
+* No ModuleManager required.
 
-## Wie der Bonus rechnet
+## Installation
 
-Bei einer Ersparnis `p` werden am Triebwerksmodul zwei Werte veraendert:
+Copy the folder `GameData/EngineerFuelSaver` into your KSP installation's `GameData`
+directory, so that you end up with:
 
 ```
-atmosphereCurve *= 1 / (1 - p)    // Isp steigt auf jeder Hoehe
-maxFuelFlow     *= (1 - p)        // Durchfluss sinkt um genau p
+Kerbal Space Program/GameData/EngineerFuelSaver/
+    Plugins/EngineerFuelSaver.dll
+    EngineerFuelSaver.cfg
+    EngineerTrait.cfg
+    EngineerFuelSaver.version
 ```
 
-Da `Schub = Durchfluss x Isp x g0` gilt, bleibt der **Schub unveraendert** und es wird
-exakt `p` weniger Treibstoff verbraucht. Wuerde man nur den Isp anheben, bekaeme man
-stattdessen mehr Schub bei gleichem Verbrauch - beides ergibt dasselbe Delta-v, aber nur
-die Variante oben entspricht woertlich "spart Sprit".
+To uninstall, delete that folder. The mod writes nothing into save games, so removing it
+leaves no traces behind.
 
-Bei Level 5 und einem Terrier mit 345 s Vakuum-Isp: Isp-Kurve x 1,0526 auf 363 s,
-`maxFuelFlow` x 0,95.
+## How the bonus is calculated
 
-### Warum nicht multIsp/multFlow
+For a saving of `p`, two values on the engine module are changed:
 
-Der erste Ansatz benutzte die Multiplikatorfelder `multIsp` und `multFlow`. Die werden
-zwar gesetzt, aber von keiner Delta-v-Rechnung gelesen - weder von der
-Stock-Stufenanzeige noch von KER oder MechJeb. Der Bonus war dadurch in jeder Anzeige
-unsichtbar. `atmosphereCurve` und `maxFuelFlow` liest dagegen jede dieser Rechnungen.
+```
+atmosphereCurve *= 1 / (1 - p)    // Isp rises at every altitude
+maxFuelFlow     *= (1 - p)        // flow drops by exactly p
+```
 
-Keines dieser Felder wird in Spielstaende geschrieben (nachgeprueft an `persistent.sfs`:
-weder `maxFuelFlow` noch `atmosphereCurve` tauchen dort auf) - der Mod hinterlaesst nichts
-Dauerhaftes. Nach jeder Aenderung wird zusaetzlich `VesselDeltaV.SetCalcsDirty(true)`
-aufgerufen, damit die Stock-Anzeige nicht auf einem alten Wert stehen bleibt.
+Since `thrust = flow x Isp x g0`, **thrust stays unchanged** while exactly `p` less fuel
+is consumed. Raising Isp alone would instead give more thrust at the same consumption -
+both yield the same delta-v, but only the variant above literally "saves fuel".
 
-## Aufbau
+Level 5 on an LV-T30 "Reliant": the Isp curve goes from 310.0 / 265.0 s (vacuum / sea
+level) to 326.3 / 278.9 s, and `maxFuelFlow` from 0.078947 to 0.075. Thrust check:
+`0.075 x 326.3 x 9.81 = 240.1 kN`, unchanged against the part's `maxThrust = 240`.
+
+### Why not multIsp / multFlow
+
+The first implementation used the multiplier fields `multIsp` and `multFlow`. They are
+set without complaint, but **no delta-v calculation reads them** - not the stock stage
+display, not Kerbal Engineer Redux, not MechJeb. The bonus was invisible in every
+readout. `atmosphereCurve` and `maxFuelFlow` are read by all of them.
+
+None of the fields used are written to save games (verified against `persistent.sfs`:
+neither `maxFuelFlow` nor `atmosphereCurve` appear there). After each change
+`VesselDeltaV.SetCalcsDirty(true)` is called so the stock display does not keep showing a
+cached value.
+
+## The skill readout
+
+`FuelSavingSkill.cs` is a custom kerbal skill, so the saving shows up in the kerbal's
+info panel next to "Provides repair skills" and the other engineer abilities. It is
+purely informational - the actual work happens in `EngineTweaker`.
+
+KSP discovers the class by reflection over the loaded assemblies
+(`[ExperienceSystem]: Found N effect types`). It is attached to the trait through the
+bundled `EngineerTrait.cfg`: KSP merges multiple `EXPERIENCE_TRAIT` nodes that share the
+same `name` - the same mechanism the Serenity expansion uses to add
+`DeployedSciencePowerSkill` to the engineer. No ModuleManager needed.
+
+The text lives in the config (`effectDescription`), default `FuelSaving:<saving>`. Every
+kerbal owns its own instance of the skill, so `<saving>` shows that kerbal's actual value:
+level 3 yields `FuelSaving:3%`. The level comes from `Parent.CrewMemberExperienceLevel()`.
+Further placeholders: `<level>`, `<perLevel>`, `<maxSaving>`, `<maxLevel>`.
+
+All values derive from `fuelSavingPerLevel`, so the readout and the rule cannot drift
+apart. For the same reason the effect deliberately carries no `modifiers` of its own.
+Use angle brackets, not curly ones: `{` and `}` are node delimiters in the config format
+and would truncate the value along with every line that follows it.
+
+The skill is constructed during database loading, long before the settings addon starts,
+so it loads the config on demand (`Settings.EnsureLoaded`). The mod's own config node is
+already in the GameDatabase at that point - measured in the log, it has a 42 ms head
+start.
+
+## Project layout
 
 ```
 src/EngineerFuelSaver/
-  EngineerFuelSaver.csproj   Build (net472, Referenzen auf die KSP-Installation)
-  Settings.cs                liest die cfg beim Spielstart
-  EngineerBonus.cs           Regelwerk: bester Ingenieur, Ersparnis, Ausnahmen
-  EngineTweaker.cs           setzt/entfernt die Werte am Triebwerk, haelt die Originale
-  FlightBonusController.cs   Durchlauf ueber alle geladenen Schiffe im Flug
-  EditorBonusController.cs   Durchlauf ueber das Schiff im Bauhof (VAB/SPH)
-  FuelSavingSkill.cs         Kerbal-Faehigkeit fuer den Infoblock (nur Anzeige)
-  Log.cs                     Logging ins KSP.log
+  EngineerFuelSaver.csproj   build (net472, references the KSP installation)
+  Settings.cs                reads the config at startup
+  EngineerBonus.cs           rules: best engineer, saving, exclusions
+  EngineTweaker.cs           applies and reverts the engine values, keeps the originals
+  FlightBonusController.cs   sweeps all loaded vessels in flight
+  EditorBonusController.cs   sweeps the vessel in the editor (VAB/SPH)
+  FuelSavingSkill.cs         kerbal skill for the info panel (display only)
+  Log.cs                     logging to KSP.log
 GameData/EngineerFuelSaver/
-  EngineerFuelSaver.cfg      Konfiguration
-  EngineerTrait.cfg          haengt die Faehigkeit an den Ingenieur
+  EngineerFuelSaver.cfg      configuration
+  EngineerTrait.cfg          attaches the skill to the engineer trait
+  EngineerFuelSaver.version  KSP-AVC version file
 ```
 
-`FuelSavingSkill.cs` ist eine eigene Kerbal-Faehigkeit, damit die Ersparnis im Infoblock
-des Kerbals steht - neben "Provides repair skills" und den uebrigen Ingenieurs-
-Faehigkeiten. Rein informativ, gerechnet wird in `EngineTweaker`.
+In the **editor**, the mod reads the crew from `ShipConstruction.ShipManifest` - the very
+assignment made in the crew dialog - and applies the same bonus, so the delta-v readout is
+already correct in the VAB and not only on the launch pad. Both controllers share the same
+logic in `EngineTweaker`.
 
-KSP findet die Klasse per Reflection ueber die geladenen Assemblies
-(`[ExperienceSystem]: Found N effect types`). Angehaengt wird sie ueber die mitgelieferte
-`EngineerTrait.cfg`: Mehrere `EXPERIENCE_TRAIT`-Nodes mit demselben `name` fuehrt KSP
-zusammen - denselben Weg benutzt die Serenity-Erweiterung, um dem Ingenieur den
-`DeployedSciencePowerSkill` zu ergaenzen. **Kein ModuleManager noetig.**
+Each controller recalculates everything every `refreshInterval` seconds (0.5 s by default)
+rather than listening to individual GameEvents. Docking, crew transfer, staging, EVA and
+mid-flight level-ups are covered without special handling. When a vessel unloads or the
+flight scene ends, the original values are written back.
 
-Der Text steht in der cfg (`effectDescription`), Vorgabe `FuelSaving:<saving>`. Weil jeder
-Kerbal eine eigene Instanz der Faehigkeit besitzt, zeigt `<saving>` dessen konkreten Wert:
-Level 3 ergibt `FuelSaving:3%`. Das Level kommt aus `Parent.CrewMemberExperienceLevel()`.
-Weitere Platzhalter: `<level>`, `<perLevel>`, `<maxSaving>`, `<maxLevel>`.
+## Building
 
-Alle Werte stammen aus `fuelSavingPerLevel` - Anzeige und Regel koennen nicht
-auseinanderlaufen. Der Effekt fuehrt aus demselben Grund bewusst keine eigenen
-`modifiers`. Spitze Klammern, nicht geschweifte: `{` und `}` sind im cfg-Format
-Node-Klammern und schneiden den Wert samt aller folgenden Zeilen ab.
-
-Steht `debugLevelOverride` auf einem Wert, zeigt der Text dieses Level statt des echten -
-sonst widersprechen sich Anzeige und Wirkung waehrend eines Tests.
-
-Weil die Faehigkeit schon waehrend des Datenbankladens gebaut wird - lange bevor das
-Settings-Addon startet - laedt sie die cfg bei Bedarf selbst nach (`Settings.EnsureLoaded`).
-Die eigene Config-Node liegt zu diesem Zeitpunkt bereits in der GameDatabase; im Log
-gemessen sind es 42 ms Vorsprung. Sprache frei waehlbar; Voreinstellung ist Englisch,
-passend zu den Stock-Faehigkeiten daneben.
-
-Im **Bauhof** liest der Mod die Besatzung aus `ShipConstruction.ShipManifest` - also genau
-die Zuweisung aus dem Crew-Dialog - und wendet denselben Bonus an, damit die
-Delta-v-Anzeige schon dort stimmt und nicht erst auf der Startrampe. Beide Controller
-teilen sich dieselbe Logik in `EngineTweaker`.
-
-Der Controller rechnet alle `refreshInterval` Sekunden (Standard 0,5 s) komplett neu,
-statt auf einzelne GameEvents zu hoeren. Docking, Crew-Transfer, Staging, EVA und
-Level-Ups mitten im Flug sind damit ohne Sonderbehandlung abgedeckt. Beim Entladen eines
-Schiffs und beim Verlassen der Flugszene werden die Originalwerte zurueckgeschrieben.
-
-## Bauen
-
-Vorausgesetzt wird KSP 1.12.5. Der csproj zeigt standardmaessig auf die vorhandene
-Steam-Installation auf Laufwerk E:. Die Referenz-DLLs aus dem Ordner
-`KSP_x64_Data/Managed` werden nur referenziert, nie mitausgeliefert.
+Requires KSP 1.12.5. The reference assemblies in `KSP_x64_Data/Managed` are referenced
+only, never redistributed.
 
 ```
 dotnet build src/EngineerFuelSaver/EngineerFuelSaver.csproj -c Release
 ```
 
-Der Build kopiert DLL und cfg anschliessend automatisch nach
-`<KSPRoot>/GameData/EngineerFuelSaver/`. Ohne dieses Deployment:
+`KSPRoot` in the csproj defaults to the author's Steam installation. Point it at your own:
+
+```
+dotnet build src/EngineerFuelSaver/EngineerFuelSaver.csproj -c Release -p:KSPRoot="D:\Games\KSP"
+```
+
+The build then deploys the DLL and the config files to
+`<KSPRoot>/GameData/EngineerFuelSaver/`. To build without deploying:
 
 ```
 dotnet build src/EngineerFuelSaver/EngineerFuelSaver.csproj -c Release -p:SkipDeploy=true
 ```
 
-Steht KSP woanders:
+Existing config files in the game are never overwritten, so your own settings survive
+every rebuild.
 
-```
-dotnet build src/EngineerFuelSaver/EngineerFuelSaver.csproj -c Release -p:KSPRoot="D:\Spiele\KSP"
-```
+## Configuration
 
-## Konfiguration
+All values live in `GameData/EngineerFuelSaver/EngineerFuelSaver.cfg`:
 
-Alle Werte in `GameData/EngineerFuelSaver/EngineerFuelSaver.cfg`:
-
-| Schluessel | Standard | Bedeutung |
+| Key | Default | Meaning |
 |---|---|---|
-| `fuelSavingPerLevel` | `0.01` | Ersparnis je Level |
-| `maxLevel` | `5` | hoechstes gewertetes Level |
-| `maxFuelSaving` | `0.9` | harte Obergrenze |
-| `refreshInterval` | `0.5` | Sekunden zwischen zwei Neuberechnungen |
-| `excludedPropellants` | `SolidFuel` | Triebwerke ohne Bonus |
-| `effectDescription` | englischer Satz | Text der Faehigkeit im Kerbal-Infoblock |
-| `fullBonusWhenExperienceDisabled` | `True` | Verhalten ohne Erfahrungssystem (Sandbox) |
-| `debugLog` | `True` | Ausgabe je Schiff und Triebwerk ins KSP.log |
-| `debugLevelOverride` | `-1` | nur zum Testen: der Ingenieur an Bord zaehlt als dieses Level |
+| `fuelSavingPerLevel` | `0.01` | saving per experience level |
+| `maxLevel` | `5` | highest level taken into account |
+| `maxFuelSaving` | `0.9` | hard upper bound |
+| `refreshInterval` | `0.5` | seconds between recalculations |
+| `excludedPropellants` | `SolidFuel` | engines that get no bonus |
+| `effectDescription` | `FuelSaving:<saving>` | skill text in the kerbal info panel |
+| `fullBonusWhenExperienceDisabled` | `True` | behaviour without the experience system (sandbox) |
+| `debugLog` | `False` | per-vessel and per-engine output to KSP.log |
+| `debugLevelOverride` | `-1` | testing only: the engineer aboard counts as this level |
 
-`debugLevelOverride` ersetzt nur das Level eines **tatsaechlich vorhandenen** Ingenieurs.
-Ohne Ingenieur an Bord bzw. im Crew-Manifest bleibt es bei 0 % - so laesst sich die
-Crew-Erkennung testen, ohne erst XP zu sammeln.
+`debugLevelOverride` only replaces the level of an engineer who is **actually present**.
+Without an engineer aboard or in the crew manifest it stays at 0 %, which makes the crew
+detection testable without grinding experience first.
 
-Der Build kopiert die cfg nur, wenn sie im Spiel noch fehlt. Eigene Einstellungen
-ueberleben also jeden Rebuild.
+## Verified in game
 
-## Status
+Built against KSP 1.12.5 (build 03190, Steam), 0 errors and 0 warnings.
 
-Gebaut gegen KSP 1.12.5 (Build 03190, Steam), 0 Fehler und 0 Warnungen. Das Plugin ist
-nach `GameData/EngineerFuelSaver/` deployed.
+* The config is read completely; the mod loads without exceptions alongside
+  ModuleManager, MechJeb2, Kerbal Engineer Redux, SCANsat and Final Frontier.
+* Crew evaluation: the engineer is identified by `trait`, the level is correct, and the
+  editor crew manifest is read.
+* Engine values are set exactly - cross-checked against the stock part config, see the
+  Reliant numbers above.
+* The `FuelSavingSkill` appears in the kerbal info panel. Confirmed in the log by
+  `[ExperienceSystem]: Found 21 effect types` (20 without the mod).
+* Control case: a **pilot** at level 1 aboard yields 0 % - the profession matters, not
+  just the level.
+* Level-up in normal operation: `Orbit,Kerbin` + `Recover` in the flight log, afterwards
+  level 1 and 1 % saving, with no debug switches.
+* The editor delta-v readout reflects the bonus.
 
-Deinstallieren: den Ordner `GameData/EngineerFuelSaver` loeschen. Der Mod schreibt nichts
-in die Spielstaende.
+One note on log reading: `EngineerFuelSaver` sorts alphabetically before `Squad`, so this
+mod's node creates the engineer trait and the stock effects are added to it. The log
+therefore shows all Squad effects as `Added Effect ... to Trait 'Engineer'` but not
+`FuelSavingSkill` - KSP only logs additions, never the effects of the node that created
+the trait. A missing `FuelSavingSkill` in the log is not a sign of failure.
 
-Im Spiel nachgewiesen (KSP.log und Bildschirm):
+With `debugLog = True` the log carries the Isp curve set for each engine, and during a
+burn the values the game itself computed (`realIsp`, thrust, flow). `realIsp` is the
+decisive measurement: it comes out of KSP's own calculation, not this mod's.
 
-* Mod laedt, cfg wird vollstaendig gelesen.
-* Crew-Auswertung: Ingenieur wird am `trait` erkannt, Level stimmt, Bauhof-Manifest wird
-  gelesen.
-* Triebwerkswerte werden exakt gesetzt - beim LV-T30 gegen die Stock-Konfiguration
-  gegengerechnet: Isp-Kurve 310,0 / 265,0 s mal 1,0526 auf 326,3 / 278,9 s,
-  `maxFuelFlow` 0,078947 mal 0,95 auf 0,075. Schubprobe: 0,075 x 326,3 x 9,81 = 240,1 kN,
-  also unveraendert gegenueber `maxThrust = 240`.
-* Die Faehigkeit `FuelSavingSkill` steht im Infoblock des Kerbals. Im Log bestaetigt durch
-  `[ExperienceSystem]: Found 21 effect types` (vorher 20).
+## Known limitations
 
-Zur Reihenfolge der Trait-Nodes: `EngineerFuelSaver` steht alphabetisch vor `Squad`, also
-legt unsere Node den Trait an und die Stock-Effekte werden ihr hinzugefuegt. Im Log
-erscheinen deshalb alle Squad-Effekte als `Added Effect ... to Trait 'Engineer'`, unser
-eigener dagegen nicht - KSP protokolliert nur Ergaenzungen, nicht die Effekte der
-erzeugenden Node. Ein fehlender `FuelSavingSkill` im Log ist also kein Hinweis auf einen
-Fehler.
+* **Loaded vessels only.** Unloaded vessels outside physics range consume no fuel in
+  stock anyway.
+* **RCS** (`ModuleRCS`) gets no bonus, main engines only.
+* With kerbal experience disabled (typical in sandbox), stock treats every kerbal as
+  fully trained; `fullBonusWhenExperienceDisabled = True` follows that and grants the
+  full bonus there.
+* Mods touching the same fields (RealFuels, engine upgrades) can conflict. The controller
+  detects overwritten values and reapplies them, but only reports this in the log.
 
-* Gegenprobe: Ein Pilot mit Level 1 an Bord bekommt 0 % - es zaehlt der Beruf, nicht nur
-  das Level.
-* Levelaufstieg im Normalbetrieb: Bill Kerman, `Orbit,Kerbin` + `Recover` im Flugbuch,
-  danach Level 1 und 1 % Ersparnis. Ohne Testschalter.
-* Die Delta-v-Anzeige im Bauhof zeigt den Bonus.
+## License
 
-Damit ist die Kette vom Kerbal bis zur Anzeige vollstaendig belegt.
+MIT, see [LICENSE](LICENSE). Copyright (c) 2026 Volker Wollmann.
 
-### Noch offen
+Use, modify and redistribute freely - the copyright notice and the license text must be
+retained.
 
-Nur der zahlenmaessige Delta-v-Vergleich (erwartet: Faktor 1,0526 bei Level 5, TWR
-identisch). Vorgehen: `debugLevelOverride = 5` setzen, Wert notieren, auf `-1` zurueck,
-KSP neu starten, erneut ablesen. Bei den 1 % eines Level-1-Ingenieurs sind es rund
-5 m/s auf 514 - zum Ablesen zu wenig.
-
-Im KSP.log steht je Triebwerk die gesetzte Isp-Kurve, und waehrend eines Brennvorgangs
-die vom Spiel selbst gerechneten Werte (`realIsp`, Schub, Durchfluss). Der `realIsp` ist
-der entscheidende Messwert: er stammt aus KSPs eigener Rechnung, nicht aus unserer.
-
-## Bekannte Einschraenkungen
-
-* **Nur geladene Schiffe.** Ungeladene Schiffe ausserhalb des Ladebereichs verbrauchen
-  in Stock ohnehin keinen Treibstoff.
-* **RCS** (`ModuleRCS`) bekommt keinen Bonus, nur Haupttriebwerke.
-* Im Sandbox-Save ist die Kerbal-Erfahrung deaktiviert; mit der Standardeinstellung
-  `fullBonusWhenExperienceDisabled = True` geben Ingenieure dort den vollen Bonus.
-* Mods, die dieselben Felder anfassen (RealFuels, Triebwerks-Upgrades), koennen
-  kollidieren. Der Controller erkennt ueberschriebene Werte und setzt sie neu, meldet das
-  aber nur im Log.
-* Wenn ein anderer Mod `multIsp`/`multFlow` am selben Triebwerk veraendert, nachdem
-  dieses Plugin es erstmals erfasst hat, kann es zu Konflikten kommen.
-
-## Lizenz
-
-MIT, siehe [LICENSE](LICENSE). Copyright (c) 2026 Volker Wollmann.
-
-Benutzen, aendern und weitergeben ist erlaubt - Copyright-Hinweis und Lizenztext muessen
-dabei erhalten bleiben.
-
-Die KSP-Assemblies aus `KSP_x64_Data/Managed` werden nur zum Uebersetzen referenziert und
-sind nicht Bestandteil dieses Repositorys. Sie duerfen nicht mitausgeliefert werden.
+The KSP assemblies in `KSP_x64_Data/Managed` are referenced for compilation only and are
+not part of this repository. They must not be redistributed.
