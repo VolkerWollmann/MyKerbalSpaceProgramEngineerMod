@@ -201,3 +201,13 @@ der entscheidende Messwert: er stammt aus KSPs eigener Rechnung, nicht aus unser
   aber nur im Log.
 * Wenn ein anderer Mod `multIsp`/`multFlow` am selben Triebwerk veraendert, nachdem
   dieses Plugin es erstmals erfasst hat, kann es zu Konflikten kommen.
+
+## Lizenz
+
+MIT, siehe [LICENSE](LICENSE). Copyright (c) 2026 Volker Wollmann.
+
+Benutzen, aendern und weitergeben ist erlaubt - Copyright-Hinweis und Lizenztext muessen
+dabei erhalten bleiben.
+
+Die KSP-Assemblies aus `KSP_x64_Data/Managed` werden nur zum Uebersetzen referenziert und
+sind nicht Bestandteil dieses Repositorys. Sie duerfen nicht mitausgeliefert werden.
