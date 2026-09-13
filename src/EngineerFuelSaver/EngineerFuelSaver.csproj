@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Pfad zur KSP-Installation. Ueberschreibbar per Kommandozeile:
+       dotnet build -p:KSPRoot="D:\Spiele\KSP" -->
+  <PropertyGroup Condition="'$(KSPRoot)' == ''">
+    <KSPRoot>E:\SteamLibrary\steamapps\common\Kerbal Space Program</KSPRoot>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>EngineerFuelSaver</AssemblyName>
+    <RootNamespace>EngineerFuelSaver</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <Version>1.0.0</Version>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <DebugType>none</DebugType>
+    <Deterministic>true</Deterministic>
+    <!-- KSP laedt nur die DLL, keine Abhaengigkeiten aus NuGet -->
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(KSPRoot)\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(KSPRoot)\KSP_x64_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(KSPRoot)\KSP_x64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="CheckKspRoot" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(KSPRoot)\KSP_x64_Data\Managed\Assembly-CSharp.dll')"
+           Text="KSP-Referenzen nicht gefunden unter '$(KSPRoot)\KSP_x64_Data\Managed'. KSP installieren oder -p:KSPRoot=... setzen." />
+  </Target>
+
+  <!-- Nach dem Build in die KSP-Installation deployen.
+       Abschaltbar mit -p:SkipDeploy=true -->
+  <Target Name="DeployToKsp" AfterTargets="Build"
+          Condition="Exists('$(KSPRoot)\GameData') And '$(SkipDeploy)' != 'true'">
+    <ItemGroup>
+      <DeployFiles Include="$(MSBuildThisFileDirectory)..\..\GameData\EngineerFuelSaver\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(KSPRoot)\GameData\EngineerFuelSaver\Plugins\" />
+    <!-- Konfiguration nur anlegen, wenn sie im Spiel noch fehlt: sonst wuerde jeder Build
+         die vom Spieler geaenderten Einstellungen ueberschreiben. -->
+    <Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(KSPRoot)\GameData\EngineerFuelSaver\%(RecursiveDir)"
+          Condition="!Exists('$(KSPRoot)\GameData\EngineerFuelSaver\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Message Importance="high" Text="EngineerFuelSaver nach $(KSPRoot)\GameData\EngineerFuelSaver deployed (vorhandene cfg bleibt unveraendert)." />
+  </Target>
+
+</Project>
