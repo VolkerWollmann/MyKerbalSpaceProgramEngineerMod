@@ -32,10 +32,11 @@ namespace EngineerFuelSaver
 
         protected override string GetDescription()
         {
-            // Der Effekt wird waehrend des Datenbankladens gebaut - also bevor das
-            // Settings-Addon startet. Die eigene Config-Node liegt zu diesem Zeitpunkt
-            // aber schon in der GameDatabase (im Log nachgemessen: 42 ms Vorsprung),
-            // deshalb hier nachladen statt auf das Addon zu warten.
+            // Die Beschreibung wird erst beim Anzeigen gebaut. Statt sich darauf zu
+            // verlassen, dass das Settings-Addon schon lief, die cfg notfalls selbst
+            // nachladen - das haelt GetDescription unabhaengig von der Szenen-Reihenfolge.
+            // In der Praxis startet das MainMenu-Addon vor der Initialisierung des
+            // Experience-Systems, die Absicherung greift also selten.
             Settings.EnsureLoaded();
             return Settings.BuildEffectDescription(GetCrewLevel());
         }

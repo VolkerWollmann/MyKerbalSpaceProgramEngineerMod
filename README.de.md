@@ -84,10 +84,11 @@ Node-Klammern und schneiden den Wert samt aller folgenden Zeilen ab.
 Steht `debugLevelOverride` auf einem Wert, zeigt der Text dieses Level statt des echten -
 sonst widersprechen sich Anzeige und Wirkung waehrend eines Tests.
 
-Weil die Faehigkeit schon waehrend des Datenbankladens gebaut wird - lange bevor das
-Settings-Addon startet - laedt sie die cfg bei Bedarf selbst nach (`Settings.EnsureLoaded`).
-Die eigene Config-Node liegt zu diesem Zeitpunkt bereits in der GameDatabase; im Log
-gemessen sind es 42 ms Vorsprung. Sprache frei waehlbar; Voreinstellung ist Englisch,
+Die Beschreibung wird erst beim Anzeigen gebaut, deshalb laedt sie die cfg notfalls selbst
+nach (`Settings.EnsureLoaded`) statt sich darauf zu verlassen, dass das Settings-Addon schon
+lief. In der Praxis startet das Addon (MainMenu) vor der Initialisierung des
+Experience-Systems - die Absicherung greift also selten, haelt `GetDescription()` aber
+unabhaengig von der Szenen-Reihenfolge. Sprache frei waehlbar; Voreinstellung ist Englisch,
 passend zu den Stock-Faehigkeiten daneben.
 
 Im **Bauhof** liest der Mod die Besatzung aus `ShipConstruction.ShipManifest` - also genau

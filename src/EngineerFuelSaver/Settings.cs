@@ -60,8 +60,9 @@ namespace EngineerFuelSaver
         }
 
         /// <summary>
-        /// Laedt die cfg beim ersten Aufruf. Noetig, weil <see cref="FuelSavingSkill"/>
-        /// schon waehrend des Datenbankladens gebaut wird - lange bevor dieses Addon startet.
+        /// Laedt die cfg beim ersten Aufruf. Absicherung fuer <see cref="FuelSavingSkill"/>:
+        /// dessen Beschreibung wird erst beim Anzeigen gebaut und soll nicht davon abhaengen,
+        /// dass dieses Addon vorher gelaufen ist.
         /// </summary>
         public static void EnsureLoaded()
         {

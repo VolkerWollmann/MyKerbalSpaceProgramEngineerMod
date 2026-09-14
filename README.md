@@ -82,10 +82,10 @@ apart. For the same reason the effect deliberately carries no `modifiers` of its
 Use angle brackets, not curly ones: `{` and `}` are node delimiters in the config format
 and would truncate the value along with every line that follows it.
 
-The skill is constructed during database loading, long before the settings addon starts,
-so it loads the config on demand (`Settings.EnsureLoaded`). The mod's own config node is
-already in the GameDatabase at that point - measured in the log, it has a 42 ms head
-start.
+The description is only built when it is shown, so it loads the config on demand if needed
+(`Settings.EnsureLoaded`) instead of relying on the settings addon having run. In practice
+the addon (MainMenu) starts before the experience system initialises - the fallback rarely
+fires, but it keeps `GetDescription()` independent of the scene order.
 
 ## Project layout
 
