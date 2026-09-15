@@ -3,15 +3,15 @@
 *[English version](README.md)*
 
 KSP-1.12.5-Plugin: Ein Ingenieur an Bord senkt den Treibstoffverbrauch aller Triebwerke
-des Schiffs um **1 % pro Sterne-Level**.
+des Schiffs um **bis zu 5 %**, abhaengig vom Sterne-Level.
 
 | Level des Ingenieurs | 0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|
-| Ersparnis | 0 % | 1 % | 2 % | 3 % | 4 % | 5 % |
+| Ersparnis | 0 % | 2 % | 3 % | 4 % | 5 % | 5 % |
 
 **Nota bene:** Im VAB kann der Ingenieur bei manchen Entwuerfen wie ein *Verlust* aussehen -
-die zusaetzlichen 94 kg Besatzung kosten Delta-v, und auf niedrigen Leveln kann das die
-Ersparnis uebersteigen. Vergleiche Gleiches mit Gleichem: derselbe Sitz mit einem
+die zusaetzlichen 94 kg Besatzung kosten Delta-v, und ein Level-0-Ingenieur setzt dem
+nichts entgegen. Vergleiche Gleiches mit Gleichem: derselbe Sitz mit einem
 Nicht-Ingenieur besetzt, nicht ein leerer Sitz. Der K.E.R. (Kerbal Engineer Redux) zeigt den
 Effekt, oder mach einen Testflug in einen niedrigen Orbit mit und ohne Ingenieur und
 vergleiche das verbleibende Delta-v.
@@ -80,11 +80,11 @@ zusammen - denselben Weg benutzt die Serenity-Erweiterung, um dem Ingenieur den
 
 Der Text steht in der cfg (`effectDescription`), Vorgabe `FuelSaving:<saving>`. Weil jeder
 Kerbal eine eigene Instanz der Faehigkeit besitzt, zeigt `<saving>` dessen konkreten Wert:
-Level 3 ergibt `FuelSaving:3%`. Das Level kommt aus `Parent.CrewMemberExperienceLevel()`.
+Level 3 ergibt `FuelSaving:4%`. Das Level kommt aus `Parent.CrewMemberExperienceLevel()`.
 Weitere Platzhalter: `<level>`, `<perLevel>`, `<maxSaving>`, `<maxLevel>`.
 
-Alle Werte stammen aus `fuelSavingPerLevel` - Anzeige und Regel koennen nicht
-auseinanderlaufen. Der Effekt fuehrt aus demselben Grund bewusst keine eigenen
+Alle Werte stammen aus `fuelSavingPerLevel` und `levelOffset` - Anzeige und Regel koennen
+nicht auseinanderlaufen. Der Effekt fuehrt aus demselben Grund bewusst keine eigenen
 `modifiers`. Spitze Klammern, nicht geschweifte: `{` und `}` sind im cfg-Format
 Node-Klammern und schneiden den Wert samt aller folgenden Zeilen ab.
 
@@ -139,6 +139,7 @@ Alle Werte in `GameData/EngineerFuelSaver/EngineerFuelSaver.cfg`:
 |---|---|---|
 | `fuelSavingPerLevel` | `0.01` | Ersparnis je Level |
 | `maxLevel` | `5` | hoechstes gewertetes Level |
+| `levelOffset` | `1` | Level, die vor der Deckelung zusaetzlich zaehlen; `0` = 1 % je Stern |
 | `maxFuelSaving` | `0.9` | harte Obergrenze |
 | `refreshInterval` | `0.5` | Sekunden zwischen zwei Neuberechnungen |
 | `excludedPropellants` | `SolidFuel` | Triebwerke ohne Bonus |
@@ -184,7 +185,7 @@ Fehler.
 * Gegenprobe: Ein Pilot mit Level 1 an Bord bekommt 0 % - es zaehlt der Beruf, nicht nur
   das Level.
 * Levelaufstieg im Normalbetrieb: Bill Kerman, `Orbit,Kerbin` + `Recover` im Flugbuch,
-  danach Level 1 und 1 % Ersparnis. Ohne Testschalter.
+  danach Level 1 und 2 % Ersparnis. Ohne Testschalter.
 * Die Delta-v-Anzeige im Bauhof zeigt den Bonus.
 
 Damit ist die Kette vom Kerbal bis zur Anzeige vollstaendig belegt.
@@ -193,8 +194,8 @@ Damit ist die Kette vom Kerbal bis zur Anzeige vollstaendig belegt.
 
 Nur der zahlenmaessige Delta-v-Vergleich (erwartet: Faktor 1,0526 bei Level 5, TWR
 identisch). Vorgehen: `debugLevelOverride = 5` setzen, Wert notieren, auf `-1` zurueck,
-KSP neu starten, erneut ablesen. Bei den 1 % eines Level-1-Ingenieurs sind es rund
-5 m/s auf 514 - zum Ablesen zu wenig.
+KSP neu starten, erneut ablesen. Bei den 2 % eines Level-1-Ingenieurs sind es rund
+10 m/s auf 514 - fuer einen sicheren Vergleich wenig.
 
 Im KSP.log steht je Triebwerk die gesetzte Isp-Kurve, und waehrend eines Brennvorgangs
 die vom Spiel selbst gerechneten Werte (`realIsp`, Schub, Durchfluss). Der `realIsp` ist

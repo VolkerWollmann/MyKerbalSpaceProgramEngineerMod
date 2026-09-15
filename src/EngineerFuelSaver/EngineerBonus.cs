@@ -71,11 +71,17 @@ namespace EngineerFuelSaver
             return manifest.GetAllCrew(false);
         }
 
-        /// <summary>Ersparnis als Anteil, z. B. 0.05 bei Level 5 und 1 % pro Level.</summary>
+        /// <summary>
+        /// Ersparnis als Anteil. Der Zuschlag aus <see cref="Settings.LevelOffset"/> wird vor
+        /// der Deckelung aufgeschlagen: Level 1 spart so viel wie sonst Level 2, Level 4 und 5
+        /// landen beide beim Maximum. Ohne Erfahrung (Level 0) bleibt es bei 0 %.
+        /// </summary>
         public static float GetFuelSaving(int level)
         {
             if (level <= 0) return 0f;
-            return Mathf.Clamp(Settings.FuelSavingPerLevel * level, 0f, Settings.MaxFuelSaving);
+
+            int effectiveLevel = Mathf.Min(level + Settings.LevelOffset, Settings.MaxLevel);
+            return Mathf.Clamp(Settings.FuelSavingPerLevel * effectiveLevel, 0f, Settings.MaxFuelSaving);
         }
 
         /// <summary>

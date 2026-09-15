@@ -17,6 +17,14 @@ namespace EngineerFuelSaver
         /// <summary>Hoechstes beruecksichtigtes Level. Stock: 5.</summary>
         public static int MaxLevel = 5;
 
+        /// <summary>
+        /// Sterne, die dem Ingenieur beim Bonus zusaetzlich gutgeschrieben werden. 1 = ein
+        /// Level-1-Ingenieur spart so viel wie sonst ein Level-2-Ingenieur. 0 = alte Kurve
+        /// mit einem Prozent je Stern. Level 0 bleibt in jedem Fall ohne Bonus, gedeckelt
+        /// wird weiterhin bei <see cref="MaxLevel"/>.
+        /// </summary>
+        public static int LevelOffset = 1;
+
         /// <summary>Harte Obergrenze der Ersparnis, verhindert Division durch 0.</summary>
         public static float MaxFuelSaving = 0.9f;
 
@@ -112,6 +120,7 @@ namespace EngineerFuelSaver
             {
                 node.TryGetValue("fuelSavingPerLevel", ref FuelSavingPerLevel);
                 node.TryGetValue("maxLevel", ref MaxLevel);
+                node.TryGetValue("levelOffset", ref LevelOffset);
                 node.TryGetValue("maxFuelSaving", ref MaxFuelSaving);
                 node.TryGetValue("refreshInterval", ref RefreshInterval);
                 node.TryGetValue("fullBonusWhenExperienceDisabled", ref FullBonusWhenExperienceDisabled);
@@ -134,12 +143,14 @@ namespace EngineerFuelSaver
             FuelSavingPerLevel = Mathf.Max(0f, FuelSavingPerLevel);
             DebugLevelOverride = Mathf.Clamp(DebugLevelOverride, -1, 5);
             MaxLevel = Mathf.Clamp(MaxLevel, 0, 5);
+            LevelOffset = Mathf.Clamp(LevelOffset, 0, 5);
             MaxFuelSaving = Mathf.Clamp(MaxFuelSaving, 0f, 0.95f);
             RefreshInterval = Mathf.Clamp(RefreshInterval, 0.1f, 10f);
 
             Log.Info(string.Format(
-                "Konfiguration geladen: {0:P1} pro Level, max. Level {1} (= max. {2:P1} Ersparnis).",
-                FuelSavingPerLevel, MaxLevel, EngineerBonus.GetFuelSaving(MaxLevel)));
+                "Konfiguration geladen: {0:P1} pro Level, Zuschlag {1} Level, max. Level {2} "
+                + "(= max. {3:P1} Ersparnis).",
+                FuelSavingPerLevel, LevelOffset, MaxLevel, EngineerBonus.GetFuelSaving(MaxLevel)));
 
             if (DebugLevelOverride >= 0)
             {

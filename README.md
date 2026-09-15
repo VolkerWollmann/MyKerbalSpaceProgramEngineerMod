@@ -3,14 +3,14 @@
 *[Deutsche Fassung](README.de.md)*
 
 A Kerbal Space Program 1.12.5 plugin: an engineer aboard reduces the fuel consumption of
-every engine on the vessel by **1 % per experience level**.
+every engine on the vessel by **up to 5 %**, depending on the experience level.
 
 | Engineer level | 0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|
-| Fuel saved | 0 % | 1 % | 2 % | 3 % | 4 % | 5 % |
+| Fuel saved | 0 % | 2 % | 3 % | 4 % | 5 % | 5 % |
 
 **Nota bene:** In the VAB the engineer can look like a *net loss* on some vessel designs - the
-extra 94 kg of crew costs delta-v, and at low experience levels that can outweigh the saving.
+extra 94 kg of crew costs delta-v, and a level 0 engineer contributes nothing to offset it.
 Compare like for like: the same seat filled by a non-engineer, not an empty seat. K.E.R.
 (Kerbal Engineer Redux) shows the effect, or make a test flight to low orbit with and without
 an engineer aboard and compare the remaining delta-v.
@@ -80,11 +80,12 @@ same `name` - the same mechanism the Serenity expansion uses to add
 
 The text lives in the config (`effectDescription`), default `FuelSaving:<saving>`. Every
 kerbal owns its own instance of the skill, so `<saving>` shows that kerbal's actual value:
-level 3 yields `FuelSaving:3%`. The level comes from `Parent.CrewMemberExperienceLevel()`.
+level 3 yields `FuelSaving:4%`. The level comes from `Parent.CrewMemberExperienceLevel()`.
 Further placeholders: `<level>`, `<perLevel>`, `<maxSaving>`, `<maxLevel>`.
 
-All values derive from `fuelSavingPerLevel`, so the readout and the rule cannot drift
-apart. For the same reason the effect deliberately carries no `modifiers` of its own.
+All values derive from `fuelSavingPerLevel` and `levelOffset`, so the readout and the rule
+cannot drift apart. For the same reason the effect deliberately carries no `modifiers` of
+its own.
 Use angle brackets, not curly ones: `{` and `}` are node delimiters in the config format
 and would truncate the value along with every line that follows it.
 
@@ -154,6 +155,7 @@ All values live in `GameData/EngineerFuelSaver/EngineerFuelSaver.cfg`:
 |---|---|---|
 | `fuelSavingPerLevel` | `0.01` | saving per experience level |
 | `maxLevel` | `5` | highest level taken into account |
+| `levelOffset` | `1` | levels credited on top before the cap; `0` restores 1 % per level |
 | `maxFuelSaving` | `0.9` | hard upper bound |
 | `refreshInterval` | `0.5` | seconds between recalculations |
 | `excludedPropellants` | `SolidFuel` | engines that get no bonus |
@@ -181,7 +183,7 @@ Built against KSP 1.12.5 (build 03190, Steam), 0 errors and 0 warnings.
 * Control case: a **pilot** at level 1 aboard yields 0 % - the profession matters, not
   just the level.
 * Level-up in normal operation: `Orbit,Kerbin` + `Recover` in the flight log, afterwards
-  level 1 and 1 % saving, with no debug switches.
+  level 1 and 2 % saving, with no debug switches.
 * The editor delta-v readout reflects the bonus.
 
 One note on log reading: `EngineerFuelSaver` sorts alphabetically before `Squad`, so this
