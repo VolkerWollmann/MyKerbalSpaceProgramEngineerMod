@@ -10,11 +10,11 @@ des Schiffs um **bis zu 5 %**, abhaengig vom Sterne-Level.
 | Ersparnis | 0 % | 2 % | 3 % | 4 % | 5 % | 5 % |
 
 **Nota bene:** Im VAB kann der Ingenieur bei manchen Entwuerfen wie ein *Verlust* aussehen -
-die zusaetzlichen 94 kg Besatzung kosten Delta-v, und ein Level-0-Ingenieur setzt dem
-nichts entgegen. Vergleiche Gleiches mit Gleichem: derselbe Sitz mit einem
-Nicht-Ingenieur besetzt, nicht ein leerer Sitz. Der K.E.R. (Kerbal Engineer Redux) zeigt den
-Effekt, oder mach einen Testflug in einen niedrigen Orbit mit und ohne Ingenieur und
-vergleiche das verbleibende Delta-v.
+die zusaetzlichen 94 kg Besatzung kosten Delta-v und uebersteigen auf leichten Schiffen die
+Ersparnis auf jedem Level. Ein Level-0-Ingenieur setzt dem ohnehin nichts entgegen.
+Vergleiche Gleiches mit Gleichem: derselbe Sitz mit einem Nicht-Ingenieur besetzt, nicht ein
+leerer Sitz. Der K.E.R. (Kerbal Engineer Redux) zeigt den Effekt, oder mach einen Testflug in
+einen niedrigen Orbit mit und ohne Ingenieur und vergleiche das verbleibende Delta-v.
 
 * Es zaehlt nur der **beste** Ingenieur an Bord, mehrere Ingenieure stapeln sich nicht.
 * Umgesetzt ueber den **spezifischen Impuls** - das Delta-v steigt entsprechend und alle

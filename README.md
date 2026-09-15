@@ -10,10 +10,11 @@ every engine on the vessel by **up to 5 %**, depending on the experience level.
 | Fuel saved | 0 % | 2 % | 3 % | 4 % | 5 % | 5 % |
 
 **Nota bene:** In the VAB the engineer can look like a *net loss* on some vessel designs - the
-extra 94 kg of crew costs delta-v, and a level 0 engineer contributes nothing to offset it.
-Compare like for like: the same seat filled by a non-engineer, not an empty seat. K.E.R.
-(Kerbal Engineer Redux) shows the effect, or make a test flight to low orbit with and without
-an engineer aboard and compare the remaining delta-v.
+extra 94 kg of crew costs delta-v, and on light vessels that outweighs the saving at every
+level. A level 0 engineer offsets nothing at all. Compare like for like: the same seat filled
+by a non-engineer, not an empty seat. K.E.R. (Kerbal Engineer Redux) shows the effect, or make
+a test flight to low orbit with and without an engineer aboard and compare the remaining
+delta-v.
 
 * Only the **most experienced** engineer aboard counts - engineers do not stack.
 * Implemented through **specific impulse**, so delta-v rises accordingly and every
