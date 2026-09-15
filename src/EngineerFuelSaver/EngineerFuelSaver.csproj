@@ -1,9 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Pfad zur KSP-Installation. Ueberschreibbar per Kommandozeile:
-       dotnet build -p:KSPRoot="D:\Spiele\KSP" -->
+  <!-- Pfad zur KSP-Installation. Vorrang: -p:KSPRoot=... auf der Kommandozeile, dann
+       Directory.Build.props im Wurzelverzeichnis, dann diese Vorgabe. Der Standardwert
+       ist bewusst der uebliche Steam-Pfad und nicht maschinenspezifisch - eigene Pfade
+       gehoeren in die nicht versionierte Directory.Build.props. -->
   <PropertyGroup Condition="'$(KSPRoot)' == ''">
-    <KSPRoot>E:\SteamLibrary\steamapps\common\Kerbal Space Program</KSPRoot>
+    <KSPRoot>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program</KSPRoot>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -37,7 +39,7 @@
 
   <Target Name="CheckKspRoot" BeforeTargets="ResolveAssemblyReferences">
     <Error Condition="!Exists('$(KSPRoot)\KSP_x64_Data\Managed\Assembly-CSharp.dll')"
-           Text="KSP-Referenzen nicht gefunden unter '$(KSPRoot)\KSP_x64_Data\Managed'. KSP installieren oder -p:KSPRoot=... setzen." />
+           Text="KSP-Referenzen nicht gefunden unter '$(KSPRoot)\KSP_x64_Data\Managed'. Eigenen Pfad in Directory.Build.props im Wurzelverzeichnis eintragen oder -p:KSPRoot=... uebergeben." />
   </Target>
 
   <!-- Nach dem Build in die KSP-Installation deployen.

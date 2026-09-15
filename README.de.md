@@ -110,8 +110,7 @@ Schiffs und beim Verlassen der Flugszene werden die Originalwerte zurueckgeschri
 
 ## Bauen
 
-Vorausgesetzt wird KSP 1.12.5. Der csproj zeigt standardmaessig auf die vorhandene
-Steam-Installation auf Laufwerk E:. Die Referenz-DLLs aus dem Ordner
+Vorausgesetzt wird KSP 1.12.5. Die Referenz-DLLs aus dem Ordner
 `KSP_x64_Data/Managed` werden nur referenziert, nie mitausgeliefert.
 
 ```
@@ -125,7 +124,19 @@ Der Build kopiert DLL und cfg anschliessend automatisch nach
 dotnet build src/EngineerFuelSaver/EngineerFuelSaver.csproj -c Release -p:SkipDeploy=true
 ```
 
-Steht KSP woanders:
+`KSPRoot` zeigt als Vorgabe auf den ueblichen Steam-Pfad. Steht KSP woanders, im
+Wurzelverzeichnis eine `Directory.Build.props` anlegen. Die ist nicht versioniert, der
+Pfad bleibt also auf deiner Maschine und landet nie im Repo:
+
+```xml
+<Project>
+  <PropertyGroup>
+    <KSPRoot>D:\Spiele\KSP</KSPRoot>
+  </PropertyGroup>
+</Project>
+```
+
+Fuer einen einzelnen Build schlaegt die Kommandozeile beides:
 
 ```
 dotnet build src/EngineerFuelSaver/EngineerFuelSaver.csproj -c Release -p:KSPRoot="D:\Spiele\KSP"

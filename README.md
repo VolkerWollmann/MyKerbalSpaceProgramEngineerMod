@@ -132,7 +132,19 @@ only, never redistributed.
 dotnet build src/EngineerFuelSaver/EngineerFuelSaver.csproj -c Release
 ```
 
-`KSPRoot` in the csproj defaults to the author's Steam installation. Point it at your own:
+`KSPRoot` defaults to the usual Steam location. If KSP lives somewhere else, create a
+`Directory.Build.props` in the repository root. It is not version-controlled, so the path
+stays on your machine and never reaches the repo:
+
+```xml
+<Project>
+  <PropertyGroup>
+    <KSPRoot>D:\Games\KSP</KSPRoot>
+  </PropertyGroup>
+</Project>
+```
+
+For a one-off build the command line overrides both:
 
 ```
 dotnet build src/EngineerFuelSaver/EngineerFuelSaver.csproj -c Release -p:KSPRoot="D:\Games\KSP"

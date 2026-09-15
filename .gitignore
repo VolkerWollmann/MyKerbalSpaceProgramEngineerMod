@@ -2,4 +2,7 @@ bin/
 obj/
 *.user
 .vs/
+
+# Maschinenspezifischer KSP-Pfad, siehe README
+Directory.Build.props
 screenshot*.jpg
