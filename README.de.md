@@ -190,12 +190,27 @@ Fehler.
 
 Damit ist die Kette vom Kerbal bis zur Anzeige vollstaendig belegt.
 
-### Noch offen
+### Zahlenmaessig belegt
 
-Nur der zahlenmaessige Delta-v-Vergleich (erwartet: Faktor 1,0526 bei Level 5, TWR
-identisch). Vorgehen: `debugLevelOverride = 5` setzen, Wert notieren, auf `-1` zurueck,
-KSP neu starten, erneut ablesen. Bei den 2 % eines Level-1-Ingenieurs sind es rund
-10 m/s auf 514 - fuer einen sicheren Vergleich wenig.
+Gegenprobe im Bauhof mit `debugLevelOverride = 5`, Rakete mit zwei Mk-55 "Thud",
+33.881 kg, Kerbin auf Meereshoehe:
+
+| | ohne Bonus | mit 5 % |
+|---|---|---|
+| Delta-v der Thud-Stufe | 2.840 m/s | 2.990 m/s |
+| Isp Vakuum | 305,0 s | 321,1 s |
+| Isp Meereshoehe | 275,0 s | 289,5 s |
+| `maxFuelFlow` | 0,04012 | 0,03811 |
+| TWR | 1,34 | 1,34 |
+
+Soll waere Isp mal 1/0,95 = 1,0526 und Durchfluss mal 0,95, Schub und TWR unveraendert.
+Alle Werte treffen das. Die Schubprobe geht auf: 0,04012 x 275,0 = 0,03811 x 289,5.
+Stock-Stufenanzeige und Kerbal Engineer Redux zeigen denselben Wert, die
+Feststoffbooster bleiben wie vorgesehen unberuehrt.
+
+Im Flug gegengeprueft, noch mit der alten 1-%-Kurve: Aufstieg auf knapp 100 km, Ingenieur
+gegen Wissenschaftler auf demselben Sitz, 1.140 gegen 1.120 m/s Restreserve. Erwartet
+waren rund 30 m/s - die Differenz liegt in der Streuung zweier Aufstiege.
 
 Im KSP.log steht je Triebwerk die gesetzte Isp-Kurve, und waehrend eines Brennvorgangs
 die vom Spiel selbst gerechneten Werte (`realIsp`, Schub, Durchfluss). Der `realIsp` ist
