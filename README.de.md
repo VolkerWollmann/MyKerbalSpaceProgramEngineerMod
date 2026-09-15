@@ -69,8 +69,8 @@ GameData/EngineerFuelSaver/
 ```
 
 `FuelSavingSkill.cs` ist eine eigene Kerbal-Faehigkeit, damit die Ersparnis im Infoblock
-des Kerbals steht - neben "Provides repair skills" und den uebrigen Ingenieurs-
-Faehigkeiten. Rein informativ, gerechnet wird in `EngineTweaker`.
+des Kerbals steht - neben "Provides repair skills" und den uebrigen
+Ingenieurs-Faehigkeiten. Rein informativ, gerechnet wird in `EngineTweaker`.
 
 KSP findet die Klasse per Reflection ueber die geladenen Assemblies
 (`[ExperienceSystem]: Found N effect types`). Angehaengt wird sie ueber die mitgelieferte
