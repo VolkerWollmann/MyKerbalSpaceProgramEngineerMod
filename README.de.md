@@ -16,6 +16,9 @@ Vergleiche Gleiches mit Gleichem: derselbe Sitz mit einem Nicht-Ingenieur besetz
 leerer Sitz. Der K.E.R. (Kerbal Engineer Redux) zeigt den Effekt, oder mach einen Testflug in
 einen niedrigen Orbit mit und ohne Ingenieur und vergleiche das verbleibende Delta-v.
 
+* Der Ingenieur muss **an den Hebeln** sitzen: in einer Kommandokapsel (Kapsel, Cockpit,
+  Cupola) oder im externen Kommandositz. In der Mitfahrer-Kabine oder im Labor kann er
+  nichts ausrichten und spart nichts (abschaltbar mit `requireCommandPod`).
 * Es zaehlt nur der **beste** Ingenieur an Bord, mehrere Ingenieure stapeln sich nicht.
 * Umgesetzt ueber den **spezifischen Impuls** - das Delta-v steigt entsprechend und alle
   Bordanzeigen bleiben konsistent.
@@ -103,6 +106,16 @@ die Zuweisung aus dem Crew-Dialog - und wendet denselben Bonus an, damit die
 Delta-v-Anzeige schon dort stimmt und nicht erst auf der Startrampe. Beide Controller
 teilen sich dieselbe Logik in `EngineTweaker`.
 
+Gezaehlt wird die Besatzung teilweise, nicht schiffsweit: `EngineerBonus.IsCommandPart`
+laesst nur Teile durch, die einen Platz an den Hebeln bieten. Das sind Teile mit
+`ModuleCommand` sowie der externe Kommandositz. Der Freisitz traegt kein `ModuleCommand` -
+seine Steuerung kommt vom Kerbal selbst -, deshalb sind dort zwei weitere Module erlaubt,
+je nachdem, wo das Spiel den Kerbal gerade fuehrt: im Bauhof am Sitz (`KerbalSeat`), im
+Flug am Teil des Sitzenden (`KerbalEVA`), das am Sitz haengt und im Spielstand die Zeile
+`crew = ...` traegt. Doppelt gezaehlt wird nichts: im Bauhof gibt es kein EVA-Teil, im Flug
+ist der Sitz selbst leer. Ein frei schwebender Kerbal ist ein eigenes Schiff ohne
+Triebwerke und kann deshalb keinem anderen Schiff einen Bonus verschaffen.
+
 Der Controller rechnet alle `refreshInterval` Sekunden (Standard 0,5 s) komplett neu,
 statt auf einzelne GameEvents zu hoeren. Docking, Crew-Transfer, Staging, EVA und
 Level-Ups mitten im Flug sind damit ohne Sonderbehandlung abgedeckt. Beim Entladen eines
@@ -155,6 +168,7 @@ Alle Werte in `GameData/EngineerFuelSaver/EngineerFuelSaver.cfg`:
 | `refreshInterval` | `0.5` | Sekunden zwischen zwei Neuberechnungen |
 | `excludedPropellants` | `SolidFuel` | Triebwerke ohne Bonus |
 | `effectDescription` | englischer Satz | Text der Faehigkeit im Kerbal-Infoblock |
+| `requireCommandPod` | `True` | nur Ingenieure in Kommandokapsel oder Freisitz zaehlen |
 | `fullBonusWhenExperienceDisabled` | `True` | Verhalten ohne Erfahrungssystem (Sandbox) |
 | `debugLog` | `False` | Ausgabe je Schiff und Triebwerk ins KSP.log |
 | `debugLevelOverride` | `-1` | nur zum Testen: der Ingenieur an Bord zaehlt als dieses Level |
@@ -232,6 +246,9 @@ der entscheidende Messwert: er stammt aus KSPs eigener Rechnung, nicht aus unser
 * **Nur geladene Schiffe.** Ungeladene Schiffe ausserhalb des Ladebereichs verbrauchen
   in Stock ohnehin keinen Treibstoff.
 * **RCS** (`ModuleRCS`) bekommt keinen Bonus, nur Haupttriebwerke.
+* Die Regel `requireCommandPod` ist **im Spiel noch nicht nachgemessen** - Kompilat gegen
+  KSP 1.12.5 und Modulnamen sind geprueft, ein Testflug mit Ingenieur in Mitfahrer-Kabine
+  bzw. Freisitz steht aus.
 * Im Sandbox-Save ist die Kerbal-Erfahrung deaktiviert; mit der Standardeinstellung
   `fullBonusWhenExperienceDisabled = True` geben Ingenieure dort den vollen Bonus.
 * Mods, die dieselben Felder anfassen (RealFuels, Triebwerks-Upgrades), koennen

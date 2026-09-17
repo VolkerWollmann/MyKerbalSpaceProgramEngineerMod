@@ -80,8 +80,9 @@ namespace EngineerFuelSaver
             lastLevel = level;
 
             List<ProtoCrewMember> crew = EngineerBonus.GetEditorCrew();
-            Log.Debugging(string.Format("Bauhof: bester Ingenieur Level {0} -> {1:P1} Ersparnis. Crew: {2}",
-                level, EngineerBonus.GetFuelSaving(level), EngineerBonus.DescribeCrew(crew)));
+            Log.Debugging(string.Format("Bauhof: bester Ingenieur Level {0} -> {1:P1} Ersparnis. {2}: {3}",
+                level, EngineerBonus.GetFuelSaving(level), EngineerBonus.CrewLabel,
+                EngineerBonus.DescribeCrew(crew)));
         }
     }
 }

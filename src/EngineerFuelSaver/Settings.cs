@@ -37,6 +37,13 @@ namespace EngineerFuelSaver
         /// </summary>
         public static bool FullBonusWhenExperienceDisabled = true;
 
+        /// <summary>
+        /// true = nur Ingenieure zaehlen, die an die Hebel kommen: in einer Kommandokapsel
+        /// (Teil mit ModuleCommand) oder im externen Kommandositz. Wer in einer Mitfahrer-
+        /// Kabine oder im Labor sitzt, spart nichts. false = jeder Ingenieur an Bord zaehlt.
+        /// </summary>
+        public static bool RequireCommandPod = true;
+
         /// <summary>Triebwerke mit einem dieser Treibstoffe bekommen keinen Bonus (Feststoffbooster).</summary>
         public static readonly HashSet<string> ExcludedPropellants =
             new HashSet<string> { "SolidFuel" };
@@ -124,6 +131,7 @@ namespace EngineerFuelSaver
                 node.TryGetValue("maxFuelSaving", ref MaxFuelSaving);
                 node.TryGetValue("refreshInterval", ref RefreshInterval);
                 node.TryGetValue("fullBonusWhenExperienceDisabled", ref FullBonusWhenExperienceDisabled);
+                node.TryGetValue("requireCommandPod", ref RequireCommandPod);
                 node.TryGetValue("debugLog", ref DebugLog);
                 node.TryGetValue("debugLevelOverride", ref DebugLevelOverride);
                 node.TryGetValue("effectDescription", ref EffectDescription);
@@ -151,6 +159,10 @@ namespace EngineerFuelSaver
                 "Konfiguration geladen: {0:P1} pro Level, Zuschlag {1} Level, max. Level {2} "
                 + "(= max. {3:P1} Ersparnis).",
                 FuelSavingPerLevel, LevelOffset, MaxLevel, EngineerBonus.GetFuelSaving(MaxLevel)));
+
+            Log.Info(RequireCommandPod
+                ? "Es zaehlen nur Ingenieure in einer Kommandokapsel oder im externen Kommandositz."
+                : "Es zaehlt jeder Ingenieur an Bord, unabhaengig vom Teil.");
 
             if (DebugLevelOverride >= 0)
             {

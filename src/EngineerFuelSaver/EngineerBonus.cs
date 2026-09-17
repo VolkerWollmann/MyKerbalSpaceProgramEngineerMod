@@ -6,6 +6,9 @@ namespace EngineerFuelSaver
 {
     /// <summary>
     /// Regelwerk: bester Ingenieur an Bord zaehlt, 1 % Ersparnis pro Sterne-Level.
+    /// Mit <see cref="Settings.RequireCommandPod"/> zaehlt er nur, wenn er in einer
+    /// Kommandokapsel oder im externen Kommandositz sitzt - wer bloss mitfliegt, ohne an
+    /// die Hebel zu kommen, spart nichts.
     /// </summary>
     public static class EngineerBonus
     {
@@ -16,7 +19,7 @@ namespace EngineerFuelSaver
         public static int GetBestEngineerLevel(Vessel vessel)
         {
             if (vessel == null) return 0;
-            return GetBestEngineerLevel(vessel.GetVesselCrew());
+            return GetBestEngineerLevel(GetVesselCrew(vessel));
         }
 
         /// <summary>
@@ -61,14 +64,109 @@ namespace EngineerFuelSaver
         }
 
         /// <summary>
+        /// Massgebliche Besatzung eines Schiffs im Flug: mit <see cref="Settings.RequireCommandPod"/>
+        /// nur die Kerbals an den Hebeln (Kommandokapsel oder Freisitz), sonst die ganze Besatzung.
+        /// </summary>
+        public static List<ProtoCrewMember> GetVesselCrew(Vessel vessel)
+        {
+            if (vessel == null) return null;
+            if (!Settings.RequireCommandPod) return vessel.GetVesselCrew();
+
+            List<ProtoCrewMember> crew = new List<ProtoCrewMember>();
+
+            List<Part> parts = vessel.parts;
+            if (parts == null) return crew;
+
+            for (int p = 0; p < parts.Count; p++)
+            {
+                Part part = parts[p];
+                if (part == null || !IsCommandPart(part)) continue;
+
+                List<ProtoCrewMember> partCrew = part.protoModuleCrew;
+                if (partCrew == null) continue;
+
+                for (int i = 0; i < partCrew.Count; i++)
+                {
+                    if (partCrew[i] != null) crew.Add(partCrew[i]);
+                }
+            }
+
+            return crew;
+        }
+
+        /// <summary>
         /// Besatzung aus dem Crew-Manifest des Bauhofs. Leer, solange nichts zugewiesen ist.
+        /// Mit <see cref="Settings.RequireCommandPod"/> zaehlen nur Kommandokapseln und Freisitze.
         /// </summary>
         public static List<ProtoCrewMember> GetEditorCrew()
         {
             VesselCrewManifest manifest = ShipConstruction.ShipManifest;
             if (manifest == null) return null;
 
-            return manifest.GetAllCrew(false);
+            if (!Settings.RequireCommandPod) return manifest.GetAllCrew(false);
+
+            List<ProtoCrewMember> crew = new List<ProtoCrewMember>();
+
+            // Das Manifest kennt die Sitze, aber nicht die Module - ob ein Teil einen Platz an
+            // den Hebeln bietet, steht deshalb am Teil im Bauhof.
+            ShipConstruct ship = EditorLogic.fetch != null ? EditorLogic.fetch.ship : null;
+            if (ship == null || ship.parts == null) return crew;
+
+            for (int p = 0; p < ship.parts.Count; p++)
+            {
+                Part part = ship.parts[p];
+                if (part == null || !IsCommandPart(part)) continue;
+
+                PartCrewManifest partManifest = manifest.GetPartCrewManifest(part.craftID);
+                if (partManifest == null) continue;
+
+                // Ein Eintrag je Sitz, leere Sitze sind null.
+                ProtoCrewMember[] partCrew = partManifest.GetPartCrew();
+                if (partCrew == null) continue;
+
+                for (int i = 0; i < partCrew.Length; i++)
+                {
+                    if (partCrew[i] != null) crew.Add(partCrew[i]);
+                }
+            }
+
+            return crew;
+        }
+
+        /// <summary>
+        /// Platz an den Hebeln. Das sind zum einen die Teile mit <c>ModuleCommand</c> -
+        /// Kapseln, Cockpits und die Cupola -, zum anderen der externe Kommandositz.
+        /// Mitfahrer-Kabinen und das Labor zaehlen nicht.
+        ///
+        /// Der Freisitz traegt kein ModuleCommand, seine Steuerung kommt vom Kerbal selbst.
+        /// Deshalb zaehlen hier drei Modularten, je nachdem, wo der Kerbal gerade gefuehrt
+        /// wird: <c>KerbalSeat</c> ist der Sitz, wie ihn das Crew-Manifest im Bauhof kennt,
+        /// <c>KerbalEVA</c> das Teil des Sitzenden, das im Flug am Sitz haengt und laut
+        /// Spielstand die Zeile "crew = ..." traegt. Doppelt gezaehlt wird dabei nichts:
+        /// im Bauhof gibt es kein EVA-Teil, im Flug ist der Sitz selbst leer.
+        ///
+        /// Ein Kerbal, der frei im All schwebt, ist ein eigenes Schiff ohne Triebwerke -
+        /// sein EVA-Teil kann also keinem anderen Schiff einen Bonus verschaffen.
+        /// </summary>
+        public static bool IsCommandPart(Part part)
+        {
+            if (part == null || part.Modules == null) return false;
+
+            for (int m = 0; m < part.Modules.Count; m++)
+            {
+                PartModule module = part.Modules[m];
+                if (module is ModuleCommand) return true;
+                if (module is KerbalSeat) return true;
+                if (module is KerbalEVA) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>Beschriftung fuers Log, damit dort steht, welche Besatzung gezaehlt wurde.</summary>
+        public static string CrewLabel
+        {
+            get { return Settings.RequireCommandPod ? "Crew an den Hebeln" : "Crew"; }
         }
 
         /// <summary>
@@ -108,7 +206,7 @@ namespace EngineerFuelSaver
         /// <summary>Crew-Auflistung fuer das Log, z. B. "Bill Kerman (Engineer Level 0)".</summary>
         public static string DescribeCrew(Vessel vessel)
         {
-            return DescribeCrew(vessel != null ? vessel.GetVesselCrew() : null);
+            return DescribeCrew(GetVesselCrew(vessel));
         }
 
         public static string DescribeCrew(List<ProtoCrewMember> crew)

@@ -16,6 +16,9 @@ by a non-engineer, not an empty seat. K.E.R. (Kerbal Engineer Redux) shows the e
 a test flight to low orbit with and without an engineer aboard and compare the remaining
 delta-v.
 
+* The engineer has to be **at the controls**: in a command pod (capsule, cockpit, cupola)
+  or in an external command seat. In a passenger cabin or the lab he cannot do anything
+  and saves nothing (switch it off with `requireCommandPod`).
 * Only the **most experienced** engineer aboard counts - engineers do not stack.
 * Implemented through **specific impulse**, so delta-v rises accordingly and every
   in-game readout stays consistent.
@@ -118,6 +121,16 @@ assignment made in the crew dialog - and applies the same bonus, so the delta-v 
 already correct in the VAB and not only on the launch pad. Both controllers share the same
 logic in `EngineTweaker`.
 
+The crew is counted per part rather than per vessel: `EngineerBonus.IsCommandPart` only
+admits parts that offer a place at the controls, which means parts carrying a
+`ModuleCommand` plus the external command seat. That seat has no `ModuleCommand` - its
+control comes from the kerbal himself - so two more modules are accepted for it, depending
+on where the game currently keeps the kerbal: on the seat in the editor (`KerbalSeat`), and
+in flight on the occupant's own part (`KerbalEVA`), which hangs off the seat and carries
+the `crew = ...` line in the save file. Nothing is counted twice: there is no EVA part in
+the editor, and in flight the seat itself is empty. A kerbal floating free is a vessel of
+his own without engines, so he cannot grant a bonus to any other vessel.
+
 Each controller recalculates everything every `refreshInterval` seconds (0.5 s by default)
 rather than listening to individual GameEvents. Docking, crew transfer, staging, EVA and
 mid-flight level-ups are covered without special handling. When a vessel unloads or the
@@ -173,6 +186,7 @@ All values live in `GameData/EngineerFuelSaver/EngineerFuelSaver.cfg`:
 | `refreshInterval` | `0.5` | seconds between recalculations |
 | `excludedPropellants` | `SolidFuel` | engines that get no bonus |
 | `effectDescription` | `FuelSaving:<saving>` | skill text in the kerbal info panel |
+| `requireCommandPod` | `True` | only engineers in a command pod or external seat count |
 | `fullBonusWhenExperienceDisabled` | `True` | behaviour without the experience system (sandbox) |
 | `debugLog` | `False` | per-vessel and per-engine output to KSP.log |
 | `debugLevelOverride` | `-1` | testing only: the engineer aboard counts as this level |
@@ -214,6 +228,9 @@ decisive measurement: it comes out of KSP's own calculation, not this mod's.
 * **Loaded vessels only.** Unloaded vessels outside physics range consume no fuel in
   stock anyway.
 * **RCS** (`ModuleRCS`) gets no bonus, main engines only.
+* The `requireCommandPod` rule has **not been measured in game yet** - it compiles against
+  KSP 1.12.5 and the module names are verified, but a test flight with an engineer in a
+  passenger cabin or an external seat is still outstanding.
 * With kerbal experience disabled (typical in sandbox), stock treats every kerbal as
   fully trained; `fullBonusWhenExperienceDisabled = True` follows that and grants the
   full bonus there.

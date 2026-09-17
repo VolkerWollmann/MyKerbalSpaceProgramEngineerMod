@@ -98,9 +98,9 @@ namespace EngineerFuelSaver
             if (vesselLevels.TryGetValue(vessel.id, out previous) && previous == level) return;
             vesselLevels[vessel.id] = level;
 
-            Log.Debugging(string.Format("{0}: bester Ingenieur Level {1} -> {2:P1} Ersparnis. Crew: {3}",
+            Log.Debugging(string.Format("{0}: bester Ingenieur Level {1} -> {2:P1} Ersparnis. {3}: {4}",
                 vessel.vesselName, level, EngineerBonus.GetFuelSaving(level),
-                EngineerBonus.DescribeCrew(vessel)));
+                EngineerBonus.CrewLabel, EngineerBonus.DescribeCrew(vessel)));
         }
     }
 }
