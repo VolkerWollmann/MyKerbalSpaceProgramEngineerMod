@@ -14,6 +14,7 @@ namespace EngineerFuelSaver
     public class FlightBonusController : MonoBehaviour
     {
         private readonly EngineTweaker tweaker = new EngineTweaker();
+        private readonly RcsTweaker rcsTweaker = new RcsTweaker();
         private readonly Dictionary<Guid, int> vesselLevels = new Dictionary<Guid, int>();
 
         private float nextScan;
@@ -28,6 +29,7 @@ namespace EngineerFuelSaver
         private void OnDestroy()
         {
             tweaker.RestoreAll();
+            rcsTweaker.RestoreAll();
             vesselLevels.Clear();
         }
 
@@ -37,6 +39,7 @@ namespace EngineerFuelSaver
             if (vessels == null) return;
 
             tweaker.BeginScan();
+            rcsTweaker.BeginScan();
 
             for (int v = 0; v < vessels.Count; v++)
             {
@@ -55,12 +58,26 @@ namespace EngineerFuelSaver
 
                     for (int m = 0; m < part.Modules.Count; m++)
                     {
-                        // Deckt ModuleEngines und ModuleEnginesFX ab (FX leitet davon ab).
-                        ModuleEngines engine = part.Modules[m] as ModuleEngines;
-                        if (engine == null) continue;
+                        PartModule module = part.Modules[m];
 
-                        if (tweaker.Apply(engine, level)) changed = true;
-                        LogBurn(engine);
+                        // Deckt ModuleEngines und ModuleEnginesFX ab (FX leitet davon ab).
+                        ModuleEngines engine = module as ModuleEngines;
+                        if (engine != null)
+                        {
+                            if (tweaker.Apply(engine, level)) changed = true;
+                            LogBurn(engine);
+                            continue;
+                        }
+
+                        // Dasselbe fuer RCS: ModuleRCS deckt auch ModuleRCSFX ab. Die
+                        // Stock-Delta-v-Anzeige rechnet RCS nicht mit, deshalb bleibt
+                        // "changed" davon unberuehrt - sonst wuerde sie ohne Grund neu rechnen.
+                        ModuleRCS rcs = module as ModuleRCS;
+                        if (rcs != null && Settings.IncludeRcs)
+                        {
+                            rcsTweaker.Apply(rcs, level);
+                            LogBurn(rcs);
+                        }
                     }
                 }
 
@@ -68,6 +85,10 @@ namespace EngineerFuelSaver
             }
 
             tweaker.EndScan();
+
+            // Bei includeRcs = False laeuft der Durchlauf leer durch und setzt damit
+            // zurueck, was zuvor womoeglich schon gesetzt war.
+            rcsTweaker.EndScan();
         }
 
         /// <summary>Stock-Delta-v-Anzeige zur Neuberechnung zwingen.</summary>
@@ -85,8 +106,37 @@ namespace EngineerFuelSaver
 
             Log.Debugging(string.Format(
                 "{0} brennt: realIsp {1:F1} s, Schub {2:F1} kN, Durchfluss {3:F4}, Drossel {4:P0}",
-                EngineTweaker.Describe(engine), engine.realIsp, engine.finalThrust,
+                ThrusterTweaker.Describe(engine), engine.realIsp, engine.finalThrust,
                 engine.fuelFlowGui, engine.currentThrottle));
+        }
+
+        /// <summary>
+        /// Dasselbe an der feuernden RCS-Duese. realISP und die Schubkraefte je Duesenmuendung
+        /// rechnet KSP selbst - sie zeigen, ob der angehobene Isp im Spiel ankommt. Die
+        /// Summe steht in ModuleRCS zwar fertig, ist dort aber privat, also hier noch einmal.
+        /// </summary>
+        private void LogBurn(ModuleRCS rcs)
+        {
+            if (!Settings.DebugLog) return;
+            if (!rcs.rcs_active || rcs.flameout) return;
+
+            float thrust = TotalThrust(rcs);
+            if (thrust <= 0f) return;
+
+            Log.Debugging(string.Format(
+                "{0} feuert: realISP {1:F1} s, Schub {2:F2} kN",
+                ThrusterTweaker.Describe(rcs), rcs.realISP, thrust));
+        }
+
+        /// <summary>Schub aller Muendungen einer RCS-Duese, 0 wenn sie gerade nicht feuert.</summary>
+        private static float TotalThrust(ModuleRCS rcs)
+        {
+            float[] forces = rcs.thrustForces;
+            if (forces == null) return 0f;
+
+            float total = 0f;
+            for (int i = 0; i < forces.Length; i++) total += forces[i];
+            return total;
         }
 
         /// <summary>Einmalige Log-Zeile je Schiff, wenn sich das erkannte Level aendert.</summary>

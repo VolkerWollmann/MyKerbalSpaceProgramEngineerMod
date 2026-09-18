@@ -44,6 +44,12 @@ namespace EngineerFuelSaver
         /// </summary>
         public static bool RequireCommandPod = true;
 
+        /// <summary>
+        /// true = RCS-Duesen (ModuleRCS, damit auch ModuleRCSFX) bekommen denselben Bonus wie
+        /// die Haupttriebwerke. false = nur Haupttriebwerke, RCS bleibt unberuehrt.
+        /// </summary>
+        public static bool IncludeRcs = true;
+
         /// <summary>Triebwerke mit einem dieser Treibstoffe bekommen keinen Bonus (Feststoffbooster).</summary>
         public static readonly HashSet<string> ExcludedPropellants =
             new HashSet<string> { "SolidFuel" };
@@ -132,6 +138,7 @@ namespace EngineerFuelSaver
                 node.TryGetValue("refreshInterval", ref RefreshInterval);
                 node.TryGetValue("fullBonusWhenExperienceDisabled", ref FullBonusWhenExperienceDisabled);
                 node.TryGetValue("requireCommandPod", ref RequireCommandPod);
+                node.TryGetValue("includeRcs", ref IncludeRcs);
                 node.TryGetValue("debugLog", ref DebugLog);
                 node.TryGetValue("debugLevelOverride", ref DebugLevelOverride);
                 node.TryGetValue("effectDescription", ref EffectDescription);
@@ -163,6 +170,10 @@ namespace EngineerFuelSaver
             Log.Info(RequireCommandPod
                 ? "Es zaehlen nur Ingenieure in einer Kommandokapsel oder im externen Kommandositz."
                 : "Es zaehlt jeder Ingenieur an Bord, unabhaengig vom Teil.");
+
+            Log.Info(IncludeRcs
+                ? "RCS-Duesen bekommen denselben Bonus wie die Haupttriebwerke."
+                : "Der Bonus gilt nur fuer Haupttriebwerke, RCS-Duesen bleiben unberuehrt.");
 
             if (DebugLevelOverride >= 0)
             {

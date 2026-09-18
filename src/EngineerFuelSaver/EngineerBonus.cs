@@ -189,9 +189,23 @@ namespace EngineerFuelSaver
         public static bool IsExcluded(ModuleEngines engine)
         {
             if (engine == null) return true;
-            if (Settings.ExcludedPropellants.Count == 0) return false;
+            return IsExcluded(engine.propellants);
+        }
 
-            List<Propellant> propellants = engine.propellants;
+        /// <summary>
+        /// Dieselbe Ausnahmeliste fuer RCS-Duesen. Massgeblich ist wie beim Triebwerk der
+        /// Treibstoff, nicht der Teiletyp: eine mit SolidFuel gepatchte Duese bliebe damit
+        /// aussen vor, die Stock-Duesen auf Monotreibstoff oder LF/Ox bekommen den Bonus.
+        /// </summary>
+        public static bool IsExcluded(ModuleRCS rcs)
+        {
+            if (rcs == null) return true;
+            return IsExcluded(rcs.propellants);
+        }
+
+        private static bool IsExcluded(List<Propellant> propellants)
+        {
+            if (Settings.ExcludedPropellants.Count == 0) return false;
             if (propellants == null) return false;
 
             for (int i = 0; i < propellants.Count; i++)

@@ -14,6 +14,7 @@ namespace EngineerFuelSaver
     public class EditorBonusController : MonoBehaviour
     {
         private readonly EngineTweaker tweaker = new EngineTweaker();
+        private readonly RcsTweaker rcsTweaker = new RcsTweaker();
 
         private float nextScan;
         private int lastLevel = -1;
@@ -28,6 +29,7 @@ namespace EngineerFuelSaver
         private void OnDestroy()
         {
             tweaker.RestoreAll();
+            rcsTweaker.RestoreAll();
         }
 
         private void Scan()
@@ -38,6 +40,8 @@ namespace EngineerFuelSaver
                 // Leerer Bauhof: nichts zu tun, aber angefasste Teile zuruecksetzen.
                 tweaker.BeginScan();
                 tweaker.EndScan();
+                rcsTweaker.BeginScan();
+                rcsTweaker.EndScan();
                 return;
             }
 
@@ -45,6 +49,7 @@ namespace EngineerFuelSaver
             LogLevel(level);
 
             tweaker.BeginScan();
+            rcsTweaker.BeginScan();
             bool changed = false;
 
             for (int p = 0; p < ship.parts.Count; p++)
@@ -54,15 +59,27 @@ namespace EngineerFuelSaver
 
                 for (int m = 0; m < part.Modules.Count; m++)
                 {
-                    ModuleEngines engine = part.Modules[m] as ModuleEngines;
-                    if (engine == null) continue;
+                    PartModule module = part.Modules[m];
 
-                    if (tweaker.Apply(engine, level)) changed = true;
+                    ModuleEngines engine = module as ModuleEngines;
+                    if (engine != null)
+                    {
+                        if (tweaker.Apply(engine, level)) changed = true;
+                        continue;
+                    }
+
+                    // RCS wird hier zwar noch nicht verbraucht, der Bonus haengt aber
+                    // schon am Teil - so zeigen Werkzeuge wie der RCS Build Aid im Bauhof
+                    // dieselben Werte wie spaeter im Flug.
+                    ModuleRCS rcs = module as ModuleRCS;
+                    if (rcs != null && Settings.IncludeRcs) rcsTweaker.Apply(rcs, level);
                 }
             }
 
             tweaker.EndScan();
+            rcsTweaker.EndScan();
 
+            // Nur Triebwerke gehen in die Stock-Delta-v-Anzeige ein, RCS nicht.
             if (changed) MarkDeltaVDirty(ship);
         }
 

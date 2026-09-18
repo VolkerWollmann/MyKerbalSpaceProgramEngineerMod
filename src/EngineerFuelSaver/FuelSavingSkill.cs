@@ -6,7 +6,8 @@ namespace EngineerFuelSaver
     /// Zeigt die Treibstoffersparnis im Faehigkeitenblock des Kerbals an, neben
     /// "Provides repair skills" und den uebrigen Ingenieurs-Faehigkeiten.
     ///
-    /// Rein informativ - gerechnet wird in <see cref="EngineTweaker"/>. Der Effekt fuehrt
+    /// Rein informativ - gerechnet wird in <see cref="EngineTweaker"/> bzw.
+    /// <see cref="RcsTweaker"/>. Der Effekt fuehrt
     /// bewusst keine eigenen modifiers, damit die Prozentwerte nur an einer Stelle stehen:
     /// in der cfg unter fuelSavingPerLevel.
     ///

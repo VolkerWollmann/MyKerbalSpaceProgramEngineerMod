@@ -1,149 +1,54 @@
-using System.Collections.Generic;
-using UnityEngine;
-
 namespace EngineerFuelSaver
 {
     /// <summary>
-    /// Setzt den Bonus am Triebwerk und haelt dessen Originalwerte fest.
-    /// Gemeinsam genutzt von Flug- und Bauhof-Controller.
+    /// Bonus am Haupttriebwerk. <see cref="ModuleEngines"/> deckt auch ModuleEnginesFX ab,
+    /// das davon ableitet.
     ///
-    /// Umsetzung bei einer Ersparnis p:
-    ///   atmosphereCurve *= 1 / (1 - p)    -> Isp steigt auf jeder Hoehe
-    ///   maxFuelFlow     *= (1 - p)        -> Durchfluss sinkt um genau p
-    /// Weil Schub = Durchfluss * Isp * g0 gilt, bleibt der Schub unveraendert und es wird
-    /// exakt p weniger Treibstoff verbraucht.
-    ///
-    /// Bewusst NICHT ueber multIsp/multFlow: diese Felder werden von den Delta-v-Rechnungen
-    /// (Stock-Stufenanzeige, KER, MechJeb) nicht gelesen, der Bonus bliebe dort unsichtbar.
-    /// Keines der benutzten Felder wird in Spielstaende geschrieben.
+    /// Rechenweg und Buchfuehrung stehen in <see cref="ThrusterTweaker{TModule}"/>; hier
+    /// stehen nur die Felder, unter denen das Triebwerk seine Werte fuehrt. Anders als die
+    /// RCS-Duese kennt es zusaetzlich einen Mindestdurchfluss, der mitskaliert werden muss -
+    /// sonst laege er nach dem Bonus ueber dem Hoechstdurchfluss.
     /// </summary>
-    public class EngineTweaker
+    public class EngineTweaker : ThrusterTweaker<ModuleEngines>
     {
-        private sealed class TrackedEngine
+        protected override string Kind
         {
-            public FloatCurve BaseCurve;
-            public float BaseMaxFuelFlow;
-            public float BaseMinFuelFlow;
-            public int AppliedLevel = -1;
+            get { return "Triebwerk"; }
         }
 
-        private readonly Dictionary<ModuleEngines, TrackedEngine> tracked =
-            new Dictionary<ModuleEngines, TrackedEngine>();
-        private readonly HashSet<ModuleEngines> seen = new HashSet<ModuleEngines>();
-        private readonly List<ModuleEngines> removals = new List<ModuleEngines>();
-
-        /// <summary>Beginn eines Durchlaufs - danach jedes gefundene Triebwerk durch Apply schicken.</summary>
-        public void BeginScan()
+        protected override bool IsExcluded(ModuleEngines engine)
         {
-            seen.Clear();
+            return EngineerBonus.IsExcluded(engine);
         }
 
-        /// <summary>Gibt true zurueck, wenn am Triebwerk etwas geaendert wurde.</summary>
-        public bool Apply(ModuleEngines engine, int level)
+        protected override FloatCurve GetCurve(ModuleEngines engine)
         {
-            if (engine == null) return false;
-            seen.Add(engine);
-
-            if (EngineerBonus.IsExcluded(engine)) level = 0;
-
-            TrackedEngine state;
-            if (!tracked.TryGetValue(engine, out state))
-            {
-                state = new TrackedEngine
-                {
-                    BaseCurve = engine.atmosphereCurve,
-                    BaseMaxFuelFlow = engine.maxFuelFlow,
-                    BaseMinFuelFlow = engine.minFuelFlow
-                };
-                tracked.Add(engine, state);
-            }
-
-            float saving = EngineerBonus.GetFuelSaving(level);
-            float expectedMaxFlow = state.BaseMaxFuelFlow * (1f - saving);
-
-            // Erneut setzen, wenn das Level sich geaendert hat ODER wenn ein anderer
-            // Codepfad (Triebwerksmodus, Upgrades) unsere Werte ueberschrieben hat.
-            bool levelChanged = state.AppliedLevel != level;
-            bool drifted = !Mathf.Approximately(engine.maxFuelFlow, expectedMaxFlow);
-            if (!levelChanged && !drifted) return false;
-
-            engine.maxFuelFlow = expectedMaxFlow;
-            engine.minFuelFlow = state.BaseMinFuelFlow * (1f - saving);
-            engine.atmosphereCurve = saving > 0f
-                ? ScaleCurve(state.BaseCurve, 1f / (1f - saving))
-                : state.BaseCurve;
-
-            state.AppliedLevel = level;
-
-            Log.Debugging(string.Format(
-                "{0}: Level {1} -> {2:P1} Ersparnis (maxFuelFlow {3:F5}, Isp vac {4:F1} s, ASL {5:F1} s){6}",
-                Describe(engine), level, saving, engine.maxFuelFlow,
-                engine.atmosphereCurve.Evaluate(0f), engine.atmosphereCurve.Evaluate(1f),
-                drifted && !levelChanged ? " [neu gesetzt, war ueberschrieben]" : string.Empty));
-
-            return true;
+            return engine.atmosphereCurve;
         }
 
-        /// <summary>Ende eines Durchlaufs - nicht mehr gesehene Triebwerke zuruecksetzen.</summary>
-        public void EndScan()
+        protected override void SetCurve(ModuleEngines engine, FloatCurve curve)
         {
-            removals.Clear();
-
-            foreach (KeyValuePair<ModuleEngines, TrackedEngine> entry in tracked)
-            {
-                if (seen.Contains(entry.Key)) continue;
-                removals.Add(entry.Key);
-            }
-
-            for (int i = 0; i < removals.Count; i++)
-            {
-                Restore(removals[i], tracked[removals[i]]);
-                tracked.Remove(removals[i]);
-            }
+            engine.atmosphereCurve = curve;
         }
 
-        public void RestoreAll()
+        protected override double GetMaxFlow(ModuleEngines engine)
         {
-            foreach (KeyValuePair<ModuleEngines, TrackedEngine> entry in tracked)
-            {
-                Restore(entry.Key, entry.Value);
-            }
-
-            tracked.Clear();
-            seen.Clear();
-            removals.Clear();
+            return engine.maxFuelFlow;
         }
 
-        public static string Describe(ModuleEngines engine)
+        protected override void SetMaxFlow(ModuleEngines engine, double value)
         {
-            return engine != null && engine.part != null && engine.part.partInfo != null
-                ? engine.part.partInfo.title
-                : "unbekanntes Triebwerk";
+            engine.maxFuelFlow = (float)value;
         }
 
-        /// <summary>Kopie der Isp-Kurve mit skalierten Stuetzstellen und Tangenten.</summary>
-        private static FloatCurve ScaleCurve(FloatCurve source, float factor)
+        protected override double GetMinFlow(ModuleEngines engine)
         {
-            FloatCurve scaled = new FloatCurve();
-            Keyframe[] keys = source.Curve.keys;
-
-            for (int i = 0; i < keys.Length; i++)
-            {
-                Keyframe key = keys[i];
-                scaled.Add(key.time, key.value * factor, key.inTangent * factor, key.outTangent * factor);
-            }
-
-            return scaled;
+            return engine.minFuelFlow;
         }
 
-        private static void Restore(ModuleEngines engine, TrackedEngine state)
+        protected override void SetMinFlow(ModuleEngines engine, double value)
         {
-            // Unity-Objekte werden beim Entladen zu "null" - dann gibt es nichts zurueckzusetzen.
-            if (engine == null || state == null) return;
-
-            engine.atmosphereCurve = state.BaseCurve;
-            engine.maxFuelFlow = state.BaseMaxFuelFlow;
-            engine.minFuelFlow = state.BaseMinFuelFlow;
+            engine.minFuelFlow = (float)value;
         }
     }
 }

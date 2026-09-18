@@ -3,7 +3,7 @@
 *[English version](README.md)*
 
 KSP-1.12.5-Plugin: Ein Ingenieur an Bord senkt den Treibstoffverbrauch aller Triebwerke
-des Schiffs um **bis zu 5 %**, abhaengig vom Sterne-Level.
+und RCS-Duesen des Schiffs um **bis zu 5 %**, abhaengig vom Sterne-Level.
 
 | Level des Ingenieurs | 0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|
@@ -22,6 +22,8 @@ einen niedrigen Orbit mit und ohne Ingenieur und vergleiche das verbleibende Del
 * Es zaehlt nur der **beste** Ingenieur an Bord, mehrere Ingenieure stapeln sich nicht.
 * Umgesetzt ueber den **spezifischen Impuls** - das Delta-v steigt entsprechend und alle
   Bordanzeigen bleiben konsistent.
+* **RCS-Duesen** sparen genauso (abschaltbar mit `includeRcs`). Schub und Steuerkraft
+  bleiben gleich, nur der Monotreibstoff haelt laenger.
 * Feststoffbooster sind ausgenommen (konfigurierbar).
 
 ## Wie der Bonus rechnet
@@ -41,12 +43,41 @@ die Variante oben entspricht woertlich "spart Sprit".
 Bei Level 5 und einem Terrier mit 345 s Vakuum-Isp: Isp-Kurve x 1,0526 auf 363 s,
 `maxFuelFlow` x 0,95.
 
+### RCS rechnet anders, spart aber dasselbe
+
+`ModuleRCS` (und damit auch `ModuleRCSFX`) fuehrt dieselben zwei Felder, kommt aber auf
+anderem Weg zum Schub:
+
+```
+maxFuelFlow = thrusterPower / (Isp(Vakuum) x g0)   einmal beim Laden des Teils
+exhaustVel  = Isp(Hoehe) x g0                      in jedem FixedUpdate neu
+Verbrauch   = maxFuelFlow x Drossel,  Schub = Verbrauch x exhaustVel
+```
+
+Ein Mindestdurchfluss existiert dort nicht. Weil `exhaustVel` jeden Physikschritt frisch
+aus `atmosphereCurve` kommt, wirkt die skalierte Kurve sofort; im Rechtsklick-Menue der
+Duese steht der angehobene Wert unter `realISP`.
+
+Die Rechnung geht genauso auf wie am Triebwerk. Bei 5 %:
+
+| | RV-105 | Vernor |
+|---|---|---|
+| `thrusterPower` | 1 kN | 12 kN |
+| Isp Vakuum | 240 -> 252,6 s | 260 -> 273,7 s |
+| Isp Meereshoehe | 100 -> 105,3 s | 140 -> 147,4 s |
+| `maxFuelFlow` | 0,000425 -> 0,000404 | 0,004706 -> 0,004471 |
+| Schub im Vakuum | 1,000 kN | 12,000 kN |
+
+Die Vernor-Duese laeuft auf LF/Ox, die RV-105 auf Monotreibstoff - massgeblich ist der
+Treibstoff, nicht der Teiletyp: `excludedPropellants` gilt hier genau wie am Triebwerk.
+
 ### Warum nicht multIsp/multFlow
 
-Der erste Ansatz benutzte die Multiplikatorfelder `multIsp` und `multFlow`. Die werden
-zwar gesetzt, aber von keiner Delta-v-Rechnung gelesen - weder von der
-Stock-Stufenanzeige noch von KER oder MechJeb. Der Bonus war dadurch in jeder Anzeige
-unsichtbar. `atmosphereCurve` und `maxFuelFlow` liest dagegen jede dieser Rechnungen.
+Der erste Ansatz benutzte die Multiplikatorfelder `multIsp` und `multFlow` (an der
+RCS-Duese heissen sie `ispMult` und `flowMult`). Die werden zwar gesetzt, aber von keiner
+Delta-v-Rechnung gelesen - weder von der Stock-Stufenanzeige noch von KER oder MechJeb.
+Der Bonus war dadurch in jeder Anzeige unsichtbar. `atmosphereCurve` und `maxFuelFlow`
+liest dagegen jede dieser Rechnungen.
 
 Keines dieser Felder wird in Spielstaende geschrieben (nachgeprueft an `persistent.sfs`:
 weder `maxFuelFlow` noch `atmosphereCurve` tauchen dort auf) - der Mod hinterlaesst nichts
@@ -60,7 +91,9 @@ src/EngineerFuelSaver/
   EngineerFuelSaver.csproj   Build (net472, Referenzen auf die KSP-Installation)
   Settings.cs                liest die cfg beim Spielstart
   EngineerBonus.cs           Regelwerk: bester Ingenieur, Ersparnis, Ausnahmen
-  EngineTweaker.cs           setzt/entfernt die Werte am Triebwerk, haelt die Originale
+  ThrusterTweaker.cs         setzt/entfernt die Werte, haelt die Originale (Basis)
+  EngineTweaker.cs           die Felder des Triebwerks (ModuleEngines/FX)
+  RcsTweaker.cs              die Felder der RCS-Duese (ModuleRCS/FX)
   FlightBonusController.cs   Durchlauf ueber alle geladenen Schiffe im Flug
   EditorBonusController.cs   Durchlauf ueber das Schiff im Bauhof (VAB/SPH)
   FuelSavingSkill.cs         Kerbal-Faehigkeit fuer den Infoblock (nur Anzeige)
@@ -73,7 +106,8 @@ GameData/EngineerFuelSaver/
 
 `FuelSavingSkill.cs` ist eine eigene Kerbal-Faehigkeit, damit die Ersparnis im Infoblock
 des Kerbals steht - neben "Provides repair skills" und den uebrigen
-Ingenieurs-Faehigkeiten. Rein informativ, gerechnet wird in `EngineTweaker`.
+Ingenieurs-Faehigkeiten. Rein informativ, gerechnet wird in `EngineTweaker` und
+`RcsTweaker`.
 
 KSP findet die Klasse per Reflection ueber die geladenen Assemblies
 (`[ExperienceSystem]: Found N effect types`). Angehaengt wird sie ueber die mitgelieferte
@@ -104,7 +138,7 @@ passend zu den Stock-Faehigkeiten daneben.
 Im **Bauhof** liest der Mod die Besatzung aus `ShipConstruction.ShipManifest` - also genau
 die Zuweisung aus dem Crew-Dialog - und wendet denselben Bonus an, damit die
 Delta-v-Anzeige schon dort stimmt und nicht erst auf der Startrampe. Beide Controller
-teilen sich dieselbe Logik in `EngineTweaker`.
+teilen sich dieselbe Logik in `ThrusterTweaker`.
 
 Gezaehlt wird die Besatzung teilweise, nicht schiffsweit: `EngineerBonus.IsCommandPart`
 laesst nur Teile durch, die einen Platz an den Hebeln bieten. Das sind Teile mit
@@ -166,11 +200,12 @@ Alle Werte in `GameData/EngineerFuelSaver/EngineerFuelSaver.cfg`:
 | `levelOffset` | `1` | Level, die vor der Deckelung zusaetzlich zaehlen; `0` = 1 % je Stern |
 | `maxFuelSaving` | `0.9` | harte Obergrenze |
 | `refreshInterval` | `0.5` | Sekunden zwischen zwei Neuberechnungen |
-| `excludedPropellants` | `SolidFuel` | Triebwerke ohne Bonus |
+| `includeRcs` | `True` | RCS-Duesen bekommen denselben Bonus |
+| `excludedPropellants` | `SolidFuel` | Treibstoffe, die keinen Bonus bekommen |
 | `effectDescription` | englischer Satz | Text der Faehigkeit im Kerbal-Infoblock |
 | `requireCommandPod` | `True` | nur Ingenieure in Kommandokapsel oder Freisitz zaehlen |
 | `fullBonusWhenExperienceDisabled` | `True` | Verhalten ohne Erfahrungssystem (Sandbox) |
-| `debugLog` | `False` | Ausgabe je Schiff und Triebwerk ins KSP.log |
+| `debugLog` | `False` | Ausgabe je Schiff, Triebwerk und RCS-Duese ins KSP.log |
 | `debugLevelOverride` | `-1` | nur zum Testen: der Ingenieur an Bord zaehlt als dieses Level |
 
 `debugLevelOverride` ersetzt nur das Level eines **tatsaechlich vorhandenen** Ingenieurs.
@@ -241,14 +276,65 @@ Im KSP.log steht je Triebwerk die gesetzte Isp-Kurve, und waehrend eines Brennvo
 die vom Spiel selbst gerechneten Werte (`realIsp`, Schub, Durchfluss). Der `realIsp` ist
 der entscheidende Messwert: er stammt aus KSPs eigener Rechnung, nicht aus unserer.
 
+### Zwei Fluege im Vergleich: Pilot gegen Ingenieur
+
+Dasselbe Schiff, dieselbe Aufstiegsbahn, nur die Besatzung getauscht - einmal Jebediah
+(Pilot Level 1), einmal Bill (Engineer Level 1, also 2 %):
+
+```
+MunTourist1: bester Ingenieur Level 0 -> 0.0 % ... Jebediah Kerman (Pilot Level 1)
+MunTourist1: bester Ingenieur Level 1 -> 2.0 % ... Bill Kerman (Engineer Level 1)
+```
+
+Gesetzte Werte im Ingenieurs-Flug, Faktor 1 / 0,98 = 1,0204:
+
+| Modul | `maxFuelFlow` | Isp Vakuum | Isp Meereshoehe |
+|---|---|---|---|
+| Bobcat LV-TX87 | 0,13158 -> 0,12894 | 310,0 -> 316,3 s | 290,0 -> 295,9 s |
+| Skipper RE-I5 | 0,20713 -> 0,20299 | 320,0 -> 326,5 s | 280,0 -> 285,7 s |
+| RCS Place-Anywhere 7 | 0,00085 -> 0,00083 | 240,0 -> 244,9 s | 100,0 -> 102,0 s |
+| Kickback SRB | 0,31055 unveraendert | 220,0 s | 195,0 s |
+
+Und das, was KSP waehrend des Brennvorgangs selbst rechnet, bei identischer Drossel:
+
+| Drossel 100 % | Pilot | Ingenieur | Verhaeltnis |
+|---|---|---|---|
+| Bobcat `realIsp` | 310,0 s | 316,3 s | 1,0203 |
+| Bobcat Schub | 400,0 kN | 400,0 kN | **unveraendert** |
+| Bobcat Durchfluss | 26,3153 | 25,7890 | **0,98000** |
+| Skipper `realIsp` | 320,0 s | 326,5 s | 1,0203 |
+| Skipper Schub | 650,0 kN | 650,0 kN | **unveraendert** |
+| Skipper Durchfluss | 41,4260 | 40,5975 | **0,98000** |
+
+Genau das war das Ziel: gleicher Schub, exakt 2 % weniger Durchfluss. Der Kickback zeigt
+in beiden Fluegen denselben Spitzendurchfluss 41,4067 - die `SolidFuel`-Ausnahme greift
+mitten im Ingenieurs-Flug, waehrend alle anderen Module auf Level 1 stehen.
+
+Fuer **RCS** belegt KSPs eigener `realISP` die angehobene Kurve, ueber 1.260 Feuer-Zeilen
+sauber getrennt zwischen den Fluegen:
+
+| | Pilot | Ingenieur |
+|---|---|---|
+| `realISP` im Vakuum | 240,0 s | 244,9 s |
+| `realISP` tief in der Atmosphaere | 101,0 s | 103,1 s |
+
+240,0 x 1,0204 = 244,90. Ein **Schub-Paar wie bei den Triebwerken gibt es fuer RCS nicht**:
+der Schub einer Duese haengt am momentanen Steuerausschlag, und der ist zwischen zwei
+Fluegen nie derselbe. Die beobachteten Spitzen (1,58 gegen 1,61 kN bei 2,0 kN Nennschub)
+sind beide Teilausschlaege und taugen nicht als Gegenprobe. Dass der Schub unveraendert
+bleibt, folgt hier aus den beiden einzeln nachgemessenen Feldern - `maxFuelFlow` mal 0,98
+und `realISP` mal 1,0204 -, nicht aus einer direkten Schubmessung.
+
+Keine Exceptions im Log, Assembly geladen als `EngineerFuelSaver, Version=1.3.0.0`.
+
 ## Bekannte Einschraenkungen
 
 * **Nur geladene Schiffe.** Ungeladene Schiffe ausserhalb des Ladebereichs verbrauchen
   in Stock ohnehin keinen Treibstoff.
-* **RCS** (`ModuleRCS`) bekommt keinen Bonus, nur Haupttriebwerke. Massgeblich ist das
-  Modul, nicht der Treibstoff: die Vernor-Duese laeuft auf LF/Ox und geht als RCS-Teil
-  trotzdem leer aus, die O-10 "Puff" ist ein richtiges Triebwerk und bekommt den vollen
-  Bonus auf Monotreibstoff.
+* Beim **RCS** ist die angehobene Isp-Kurve im Flug nachgemessen (`realISP` 240,0 -> 244,9 s
+  im Vakuum), der **unveraenderte Schub dagegen nicht direkt** - dafuer muesste in beiden
+  Fluegen derselbe Steuerausschlag anliegen, was sich nicht herstellen laesst. Er folgt aus
+  den beiden einzeln belegten Feldern.
 * Die Regel `requireCommandPod` ist **im Spiel noch nicht nachgemessen** - Kompilat gegen
   KSP 1.12.5 und Modulnamen sind geprueft, ein Testflug mit Ingenieur in Mitfahrer-Kabine
   bzw. Freisitz steht aus.
@@ -259,12 +345,19 @@ der entscheidende Messwert: er stammt aus KSPs eigener Rechnung, nicht aus unser
   aber nur im Log.
 * Wenn ein anderer Mod `multIsp`/`multFlow` am selben Triebwerk veraendert, nachdem
   dieses Plugin es erstmals erfasst hat, kann es zu Konflikten kommen.
+* RCS geht in die **Stock-Delta-v-Anzeige** nicht ein - dort taucht der Bonus fuer die
+  Duesen also nicht auf, auch wenn er wirkt. Der `realISP` im Rechtsklick-Menue der Duese
+  zeigt ihn.
 
 ## Versionen
 
 Die Nummer steht in `GameData/EngineerFuelSaver/EngineerFuelSaver.version` (KSP-AVC) und
 in der csproj, jede Veroeffentlichung traegt ausserdem ein Git-Tag `vX.Y.Z`.
 
+* **1.3.0** - RCS-Duesen (`ModuleRCS`, damit auch `ModuleRCSFX`) bekommen denselben Bonus
+  wie die Haupttriebwerke, abschaltbar mit `includeRcs`. Damit faellt die bisherige
+  Einschraenkung weg, dass nur Haupttriebwerke sparen; die Vernor-Duese spart jetzt also
+  auch. Im Spiel gegengeprueft mit zwei Fluegen, Pilot gegen Ingenieur.
 * **1.2.0** - Der Bonus gilt nur noch fuer Ingenieure an den Hebeln: Kommandokapsel oder
   externer Kommandositz, abschaltbar mit `requireCommandPod`. Im Spiel noch nicht
   nachgemessen. Dazu die Klarstellung, dass ueber den Bonus der Modultyp entscheidet und
