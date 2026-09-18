@@ -240,6 +240,19 @@ decisive measurement: it comes out of KSP's own calculation, not this mod's.
 * Mods touching the same fields (RealFuels, engine upgrades) can conflict. The controller
   detects overwritten values and reapplies them, but only reports this in the log.
 
+## Versions
+
+The number lives in `GameData/EngineerFuelSaver/EngineerFuelSaver.version` (KSP-AVC) and
+in the csproj; every release also carries a git tag `vX.Y.Z`.
+
+* **1.2.0** - The bonus now only applies to engineers at the controls: command pod or
+  external command seat, switch it off with `requireCommandPod`. Not measured in game
+  yet. Plus the clarification that the module type decides, not the propellant - the
+  O-10 "Puff" gets the bonus, the Vernor thruster does not.
+* **1.1.0** - Bonus curve with one level added before the cap (`levelOffset`): a level 1
+  engineer saves as much as a level 2 engineer did before.
+* **1.0.0** - First release.
+
 ## License
 
 MIT, see [LICENSE](LICENSE). Copyright (c) 2026 Volker Wollmann.

@@ -260,6 +260,19 @@ der entscheidende Messwert: er stammt aus KSPs eigener Rechnung, nicht aus unser
 * Wenn ein anderer Mod `multIsp`/`multFlow` am selben Triebwerk veraendert, nachdem
   dieses Plugin es erstmals erfasst hat, kann es zu Konflikten kommen.
 
+## Versionen
+
+Die Nummer steht in `GameData/EngineerFuelSaver/EngineerFuelSaver.version` (KSP-AVC) und
+in der csproj, jede Veroeffentlichung traegt ausserdem ein Git-Tag `vX.Y.Z`.
+
+* **1.2.0** - Der Bonus gilt nur noch fuer Ingenieure an den Hebeln: Kommandokapsel oder
+  externer Kommandositz, abschaltbar mit `requireCommandPod`. Im Spiel noch nicht
+  nachgemessen. Dazu die Klarstellung, dass ueber den Bonus der Modultyp entscheidet und
+  nicht der Treibstoff - die O-10 "Puff" bekommt ihn, die Vernor-Duese nicht.
+* **1.1.0** - Bonuskurve mit einem Level Zuschlag vor der Deckelung (`levelOffset`): ein
+  Level-1-Ingenieur spart so viel wie zuvor ein Level-2-Ingenieur.
+* **1.0.0** - Erste Fassung.
+
 ## Lizenz
 
 MIT, siehe [LICENSE](LICENSE). Copyright (c) 2026 Volker Wollmann.
