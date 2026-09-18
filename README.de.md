@@ -245,7 +245,10 @@ der entscheidende Messwert: er stammt aus KSPs eigener Rechnung, nicht aus unser
 
 * **Nur geladene Schiffe.** Ungeladene Schiffe ausserhalb des Ladebereichs verbrauchen
   in Stock ohnehin keinen Treibstoff.
-* **RCS** (`ModuleRCS`) bekommt keinen Bonus, nur Haupttriebwerke.
+* **RCS** (`ModuleRCS`) bekommt keinen Bonus, nur Haupttriebwerke. Massgeblich ist das
+  Modul, nicht der Treibstoff: die Vernor-Duese laeuft auf LF/Ox und geht als RCS-Teil
+  trotzdem leer aus, die O-10 "Puff" ist ein richtiges Triebwerk und bekommt den vollen
+  Bonus auf Monotreibstoff.
 * Die Regel `requireCommandPod` ist **im Spiel noch nicht nachgemessen** - Kompilat gegen
   KSP 1.12.5 und Modulnamen sind geprueft, ein Testflug mit Ingenieur in Mitfahrer-Kabine
   bzw. Freisitz steht aus.

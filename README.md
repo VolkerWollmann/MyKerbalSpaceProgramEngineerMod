@@ -227,7 +227,10 @@ decisive measurement: it comes out of KSP's own calculation, not this mod's.
 
 * **Loaded vessels only.** Unloaded vessels outside physics range consume no fuel in
   stock anyway.
-* **RCS** (`ModuleRCS`) gets no bonus, main engines only.
+* **RCS** (`ModuleRCS`) gets no bonus, main engines only. What counts is the module, not
+  the propellant: the Vernor thruster burns LF/Ox and still gets nothing because it is an
+  RCS part, while the O-10 "Puff" is a proper engine and gets the full bonus on
+  monopropellant.
 * The `requireCommandPod` rule has **not been measured in game yet** - it compiles against
   KSP 1.12.5 and the module names are verified, but a test flight with an engineer in a
   passenger cabin or an external seat is still outstanding.
