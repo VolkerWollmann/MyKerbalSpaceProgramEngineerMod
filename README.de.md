@@ -50,6 +50,47 @@ und Durchfluss gegenlaeufig, bleibt das Produkt gleich, egal welcher Wert dort s
 Bei Level 5 und einem Terrier mit 345 s Vakuum-Isp: Isp-Kurve x 1,0526 auf 363 s,
 `maxFuelFlow` x 0,95.
 
+### Was atmosphereCurve ist, und warum die ganze Kurve skaliert wird
+
+`atmosphereCurve` ist keine zusaetzliche Groesse neben dem Isp - sie **ist** der Isp. Die
+Kurve bildet den Umgebungsdruck auf den Isp ab: x ist `part.staticPressureAtm`, der
+statische Druck in Atmosphaeren, y der Isp in Sekunden.
+
+```
+x = 0    Vakuum                    LV-TX87 "Bobcat": y = 310 s
+x = 1    Kerbin auf Meereshoehe    LV-TX87 "Bobcat": y = 290 s
+x ~ 5    Eve am Boden
+```
+
+Deshalb stehen im Log genau diese beiden Stuetzstellen: `Isp vac` ist `Evaluate(0)`, `ASL`
+ist `Evaluate(1)`. In `ModuleEngines` sieht die Kette so aus:
+
+```
+realIsp = atmosphereCurve.Evaluate(part.staticPressureAtm)
+Schub   = Lerp(minFuelFlow, maxFuelFlow, Drossel) x realIsp x g0
+```
+
+Der Isp ist also nichts Festes - er wandert waehrend des Aufstiegs die Kurve entlang, und
+KSP wertet sie in jedem Physikschritt neu aus. Genau darum reicht es nicht, irgendwo eine
+einzelne Zahl anzuheben: die Ersparnis soll auf jeder Hoehe gelten. Wird jeder Punkt der
+Kurve mit `1 / (1 - p)` multipliziert, bleibt `Durchfluss x Isp(x)` bei **jedem** Druck
+gleich - auf der Startrampe wie im Orbit. Beim Bobcat mit 2 %: 310 -> 316,3 und
+290 -> 295,9, beide Male derselbe Faktor 1,0204.
+
+Dass dabei auch die **Tangenten** mitskaliert werden, ist kein Detail: eine `FloatCurve`
+ist ein Hermite-Spline, zwischen den Stuetzstellen wird aus Wert *und* Steigung
+interpoliert. Wuerde man nur die Werte skalieren, traefe die neue Kurve zwar die
+Stuetzstellen, liefe dazwischen aber falsch - und dazwischen fliegt man die meiste Zeit.
+Weil die Hermite-Interpolation linear in Werten und Tangenten ist, ergibt das Skalieren
+beider zusammen exakt die `k`-fache Funktion an jeder Stelle:
+
+```csharp
+scaled.Add(key.time, key.value * factor, key.inTangent * factor, key.outTangent * factor);
+```
+
+`minFuelFlow` wird aus demselben Grund mitskaliert wie `maxFuelFlow`: der Schub
+interpoliert zwischen beiden, der untere Anschlag muss also mitwandern.
+
 ### RCS rechnet anders, spart aber dasselbe
 
 `ModuleRCS` (und damit auch `ModuleRCSFX`) fuehrt dieselben zwei Felder, kommt aber auf

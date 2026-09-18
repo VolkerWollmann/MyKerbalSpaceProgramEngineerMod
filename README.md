@@ -67,6 +67,46 @@ Level 5 on an LV-T30 "Reliant": the Isp curve goes from 310.0 / 265.0 s (vacuum 
 level) to 326.3 / 278.9 s, and `maxFuelFlow` from 0.078947 to 0.075. Thrust check:
 `0.075 x 326.3 x 9.80665 = 240.0 kN`, unchanged against the part's `maxThrust = 240`.
 
+### What atmosphereCurve is, and why the whole curve gets scaled
+
+`atmosphereCurve` is not some extra quantity beside the Isp - it **is** the Isp. The curve
+maps ambient pressure to Isp: x is `part.staticPressureAtm`, the static pressure in
+atmospheres, y is the Isp in seconds.
+
+```
+x = 0    vacuum                LV-TX87 "Bobcat": y = 310 s
+x = 1    Kerbin at sea level   LV-TX87 "Bobcat": y = 290 s
+x ~ 5    Eve at the surface
+```
+
+That is why the log prints exactly those two sample points: `Isp vac` is `Evaluate(0)`,
+`ASL` is `Evaluate(1)`. In `ModuleEngines` the chain reads:
+
+```
+realIsp = atmosphereCurve.Evaluate(part.staticPressureAtm)
+thrust  = Lerp(minFuelFlow, maxFuelFlow, throttle) x realIsp x g0
+```
+
+So the Isp is nothing fixed - it travels along the curve during the ascent, and KSP
+re-evaluates it every physics step. That is precisely why raising a single number
+somewhere would not do: the saving has to hold at every altitude. Multiply every point of
+the curve by `1 / (1 - p)` and `flow x Isp(x)` stays the same at **any** pressure - on the
+pad as in orbit. On the Bobcat at 2 %: 310 -> 316.3 and 290 -> 295.9, the same factor
+1.0204 both times.
+
+Scaling the **tangents** along with the values is not a detail: a `FloatCurve` is a
+Hermite spline, and between the sample points it interpolates from value *and* slope.
+Scaling only the values would hit the sample points but run wrong in between - and in
+between is where you spend most of the flight. Because Hermite interpolation is linear in
+values and tangents, scaling both yields exactly `k` times the function everywhere:
+
+```csharp
+scaled.Add(key.time, key.value * factor, key.inTangent * factor, key.outTangent * factor);
+```
+
+`minFuelFlow` is scaled for the same reason as `maxFuelFlow`: thrust interpolates between
+the two, so the lower stop has to move along.
+
 ### RCS does the arithmetic differently and saves the same
 
 `ModuleRCS` (and therefore `ModuleRCSFX`) carries the same two fields but arrives at
