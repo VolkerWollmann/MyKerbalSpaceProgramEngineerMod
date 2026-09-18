@@ -40,6 +40,13 @@ exakt `p` weniger Treibstoff verbraucht. Wuerde man nur den Isp anheben, bekaeme
 stattdessen mehr Schub bei gleichem Verbrauch - beides ergibt dasselbe Delta-v, aber nur
 die Variante oben entspricht woertlich "spart Sprit".
 
+`g0` ist dabei die Normfallbeschleunigung 9,80665 m/s^2 - nicht Kerbins
+Oberflaechenschwerkraft und auch nicht das gerundete 9,81. KSP hat den Wert sowohl im
+Triebwerk als auch in der RCS-Duese fest verdrahtet; er dient nur dazu, den in Sekunden
+angegebenen Isp in eine Austrittsgeschwindigkeit umzurechnen, und ist deshalb auf jedem
+Himmelskoerper derselbe. Fuer den Bonus kuerzt er sich ohnehin heraus: skaliert man Isp
+und Durchfluss gegenlaeufig, bleibt das Produkt gleich, egal welcher Wert dort steht.
+
 Bei Level 5 und einem Terrier mit 345 s Vakuum-Isp: Isp-Kurve x 1,0526 auf 363 s,
 `maxFuelFlow` x 0,95.
 
@@ -230,8 +237,8 @@ Im Spiel nachgewiesen (KSP.log und Bildschirm):
   gelesen.
 * Triebwerkswerte werden exakt gesetzt - beim LV-T30 gegen die Stock-Konfiguration
   gegengerechnet: Isp-Kurve 310,0 / 265,0 s mal 1,0526 auf 326,3 / 278,9 s,
-  `maxFuelFlow` 0,078947 mal 0,95 auf 0,075. Schubprobe: 0,075 x 326,3 x 9,81 = 240,1 kN,
-  also unveraendert gegenueber `maxThrust = 240`.
+  `maxFuelFlow` 0,078947 mal 0,95 auf 0,075. Schubprobe: 0,075 x 326,3 x 9,80665 =
+  240,0 kN, also unveraendert gegenueber `maxThrust = 240`.
 * Die Faehigkeit `FuelSavingSkill` steht im Infoblock des Kerbals. Im Log bestaetigt durch
   `[ExperienceSystem]: Found 21 effect types` (vorher 20).
 

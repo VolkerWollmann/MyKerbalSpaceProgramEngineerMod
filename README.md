@@ -57,9 +57,15 @@ Since `thrust = flow x Isp x g0`, **thrust stays unchanged** while exactly `p` l
 is consumed. Raising Isp alone would instead give more thrust at the same consumption -
 both yield the same delta-v, but only the variant above literally "saves fuel".
 
+`g0` here is standard gravity, 9.80665 m/s^2 - not Kerbin's surface gravity and not the
+rounded 9.81. KSP hard-codes the value in both the engine and the RCS thruster; it serves
+only to turn an Isp given in seconds into an exhaust velocity, and it is the same on every
+celestial body. For the bonus it cancels out anyway: scaling Isp and flow in opposite
+directions leaves the product unchanged, whatever the value happens to be.
+
 Level 5 on an LV-T30 "Reliant": the Isp curve goes from 310.0 / 265.0 s (vacuum / sea
 level) to 326.3 / 278.9 s, and `maxFuelFlow` from 0.078947 to 0.075. Thrust check:
-`0.075 x 326.3 x 9.81 = 240.1 kN`, unchanged against the part's `maxThrust = 240`.
+`0.075 x 326.3 x 9.80665 = 240.0 kN`, unchanged against the part's `maxThrust = 240`.
 
 ### RCS does the arithmetic differently and saves the same
 
